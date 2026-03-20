@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luna 💜 Your AI Girlfriend</title>
+    <meta name="description" content="Chat with Luna, your sweet AI girlfriend chatbot">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Floating Hearts Background -->
+    <div class="hearts-bg" id="heartsBg"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="chat-header">
+            <div class="header-left">
+                <div class="avatar-wrapper">
+                    <div class="avatar">
+                        <span class="avatar-emoji">💜</span>
+                    </div>
+                    <span class="online-dot"></span>
+                </div>
+                <div class="header-info">
+                    <h1 class="header-name">Luna</h1>
+                    <p class="header-status">
+                        <span class="status-dot"></span>
+                        Online • Your AI Girlfriend
+                    </p>
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="header-btn" id="clearBtn" title="Clear Chat">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+                <button class="header-btn" id="themeBtn" title="Toggle Theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Chat Area -->
+        <main class="chat-area" id="chatArea">
+            <!-- Welcome Message -->
+            <div class="welcome-msg" id="welcomeMsg">
+                <div class="welcome-avatar">💜</div>
+                <h2>Hey there, cutie! 💕</h2>
+                <p>I'm <strong>Luna</strong>, your AI girlfriend. I'm here to chat, laugh, and keep you company. Ask me anything or just say hi!</p>
+            </div>
+        </main>
+
+        <!-- Typing Indicator -->
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="typing-avatar">💜</div>
+            <div class="typing-bubble">
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <footer class="chat-input-area">
+            <div class="input-wrapper">
+                <textarea id="userInput" placeholder="Type a message to Luna..." rows="1" maxlength="500"></textarea>
+                <button class="send-btn" id="sendBtn" title="Send Message">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+            </div>
+            <p class="input-hint">Press <kbd>Enter</kbd> to send • <kbd>Shift+Enter</kbd> for new line</p>
+        </footer>
+    </div>
+
+    <!-- Mood Selector Popup -->
+    <div class="mood-popup" id="moodPopup">
+        <div class="mood-content">
+            <h3>How are you feeling? 💭</h3>
+            <div class="mood-grid">
+                <button class="mood-btn" data-mood="happy">😊 Happy</button>
+                <button class="mood-btn" data-mood="sad">😢 Sad</button>
+                <button class="mood-btn" data-mood="romantic">🥰 Romantic</button>
+                <button class="mood-btn" data-mood="bored">😴 Bored</button>
+                <button class="mood-btn" data-mood="excited">🤩 Excited</button>
+                <button class="mood-btn" data-mood="stressed">😰 Stressed</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
