@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Luna 💜 Your AI Girlfriend</title>
     <meta name="description" content="Chat with Luna, your sweet AI girlfriend chatbot">
+    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -33,9 +34,6 @@
             <div class="header-right">
                 <button class="header-btn" id="clearBtn" title="Clear Chat">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                </button>
-                <button class="header-btn" id="themeBtn" title="Toggle Theme">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
                 </button>
             </div>
         </header>
@@ -72,21 +70,9 @@
         </footer>
     </div>
 
-    <!-- Mood Selector Popup -->
-    <div class="mood-popup" id="moodPopup">
-        <div class="mood-content">
-            <h3>How are you feeling? 💭</h3>
-            <div class="mood-grid">
-                <button class="mood-btn" data-mood="happy">😊 Happy</button>
-                <button class="mood-btn" data-mood="sad">😢 Sad</button>
-                <button class="mood-btn" data-mood="romantic">🥰 Romantic</button>
-                <button class="mood-btn" data-mood="bored">😴 Bored</button>
-                <button class="mood-btn" data-mood="excited">🤩 Excited</button>
-                <button class="mood-btn" data-mood="stressed">😰 Stressed</button>
-            </div>
-        </div>
-    </div>
-
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
