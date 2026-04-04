@@ -44,3 +44,8 @@ flask-cors
 python-dotenv
 python-decouple
 pydantic-settings
+
+google-auth
+requests
+razorpay
+gunicorn
