@@ -29,11 +29,16 @@ razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 def serve_index():
     return send_from_directory('.', 'index.html')
 
+@app.route("/terms")
+def serve_terms():
+    return send_from_directory('.', 'terms.html')
+
+
 # ==========================================
 # Auth Routes
 # ==========================================
 
-@app.route("/api/signup", methods=["POST"])
+@app.route("/api/signup", methods=["POST"]) 
 def signup():
     """Register a new user and add initial context flow."""
     data = request.get_json()
