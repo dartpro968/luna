@@ -516,7 +516,7 @@
   <main class="cards-grid" id="cards-grid">
 
     <!-- ✦ LUNA ── -->
-    <a href="/index.html" class="persona-card luna-card" id="card-luna" aria-label="Chat with Luna">
+    <div class="persona-card luna-card" id="card-luna" role="button" tabindex="0" aria-label="Chat with Luna">
       <div class="card-visual">
         <div class="card-gradient-bg">
           <div class="card-glow-orb"></div>
@@ -549,10 +549,10 @@
           <span class="btn-inner">Chat with Luna <span class="btn-arrow">→</span></span>
         </button>
       </div>
-    </a>
+    </div>
 
     <!-- ✦ PRIYA ── -->
-    <a href="#" class="persona-card priya-card" id="card-priya" aria-label="Chat with Priya — Coming Soon">
+    <div class="persona-card priya-card" id="card-priya" role="button" tabindex="0" aria-label="Chat with Priya">
       <div class="card-visual">
         <div class="card-gradient-bg">
           <div class="card-glow-orb"></div>
@@ -566,7 +566,7 @@
       <div class="card-body">
         <div class="persona-name">Priya</div>
         <div class="persona-tagline">
-          🟡 Coming Soon · Chandigarh, Punjab &nbsp;·&nbsp; Age 27
+          <span class="online-dot"></span> Online · Chandigarh, Punjab &nbsp;·&nbsp; Age 27
         </div>
         <p class="persona-desc">
           Fiery Punjabi girl with gold jhumkas and a heart of fire. Will feed you dal makhani and roast you lovingly in the same breath.
@@ -581,17 +581,14 @@
           <div class="info-item"><div class="info-dot"></div>Marketing Manager</div>
           <div class="info-item"><div class="info-dot"></div>Rides an Activa</div>
         </div>
-        <button class="card-cta" disabled>
-          <span class="btn-inner">Coming Soon ✨</span>
+        <button class="card-cta">
+          <span class="btn-inner">Chat with Priya <span class="btn-arrow">→</span></span>
         </button>
       </div>
-      <div class="coming-soon-overlay">
-        <span class="coming-soon-badge">🚧 Coming Soon</span>
-      </div>
-    </a>
+    </div>
 
     <!-- ✦ SOFIA ── -->
-    <a href="#" class="persona-card sofia-card" id="card-sofia" aria-label="Chat with Sofia — Coming Soon">
+    <div class="persona-card sofia-card" id="card-sofia" role="button" tabindex="0" aria-label="Chat with Sofia">
       <div class="card-visual">
         <div class="card-gradient-bg">
           <div class="card-glow-orb"></div>
@@ -606,7 +603,7 @@
       <div class="card-body">
         <div class="persona-name">Sofia</div>
         <div class="persona-tagline">
-          🔴 Coming Soon · Shoreditch, London &nbsp;·&nbsp; Age 29
+          <span class="online-dot"></span> Online · Shoreditch, London &nbsp;·&nbsp; Age 29
         </div>
         <p class="persona-desc">
           Sevillana in East London. Flamenco in her DNA, a glass of Rioja in her hand, and the most intense amber eyes you've ever seen.
@@ -621,17 +618,14 @@
           <div class="info-item"><div class="info-dot"></div>UX Designer</div>
           <div class="info-item"><div class="info-dot"></div>Flamenco dancer</div>
         </div>
-        <button class="card-cta" disabled>
-          <span class="btn-inner">Coming Soon ✨</span>
+        <button class="card-cta">
+          <span class="btn-inner">Chat with Sofia <span class="btn-arrow">→</span></span>
         </button>
       </div>
-      <div class="coming-soon-overlay">
-        <span class="coming-soon-badge">🚧 Coming Soon</span>
-      </div>
-    </a>
+    </div>
 
     <!-- ✦ NARA ── -->
-    <a href="#" class="persona-card nara-card" id="card-nara" aria-label="Chat with Nara — Coming Soon">
+    <div class="persona-card nara-card" id="card-nara" role="button" tabindex="0" aria-label="Chat with Nara">
       <div class="card-visual">
         <div class="card-gradient-bg">
           <div class="card-glow-orb"></div>
@@ -646,7 +640,7 @@
       <div class="card-body">
         <div class="persona-name">Nara</div>
         <div class="persona-tagline">
-          🔵 Coming Soon · Bangkok, Thailand &nbsp;·&nbsp; Age 25
+          <span class="online-dot"></span> Online · Bangkok, Thailand &nbsp;·&nbsp; Age 25
         </div>
         <p class="persona-desc">
           Soft-spoken Thai photographer. A proud lesbian who sees the world through a film camera lens and advocates fiercely for love in all its forms.
@@ -661,14 +655,11 @@
           <div class="info-item"><div class="info-dot"></div>Freelance Photographer</div>
           <div class="info-item"><div class="info-dot"></div>Has Mango & Cloud cats</div>
         </div>
-        <button class="card-cta" disabled>
-          <span class="btn-inner">Coming Soon ✨</span>
+        <button class="card-cta">
+          <span class="btn-inner">Chat with Nara <span class="btn-arrow">→</span></span>
         </button>
       </div>
-      <div class="coming-soon-overlay">
-        <span class="coming-soon-badge">🚧 Coming Soon</span>
-      </div>
-    </a>
+    </div>
 
   </main>
 
@@ -684,6 +675,12 @@
   </footer>
 
   <script>
+    // ── Auth guard — redirect to /index.html if not logged in ──
+    (function() {
+      const token = localStorage.getItem('luna_access_token');
+      if (!token) { window.location.href = '/'; }
+    })();
+
     // ── Particles ──────────────────────────────────
     (function () {
       const container = document.getElementById('particles');
@@ -725,21 +722,27 @@
     addSparkles('sparkles-sofia', '#ef4444');
     addSparkles('sparkles-nara',  '#06b6d4');
 
-    // ── Intercept disabled cards ───────────────────
-    document.querySelectorAll('.persona-card.coming-soon, .persona-card:not([href="/index.html"])').forEach(card => {
-      // only block the non-luna cards
-      if (!card.id || card.id === 'card-luna') return;
-      card.addEventListener('click', e => e.preventDefault());
-    });
+    // ── Choose persona & enter chat ─────────────────
+    const personaMap = {
+      'card-luna':  'luna',
+      'card-priya': 'priya',
+      'card-sofia': 'sofia',
+      'card-nara':  'nara'
+    };
 
-    // Block Priya / Sofia / Nara clicks
-    ['card-priya','card-sofia','card-nara'].forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.addEventListener('click', e => {
-        e.preventDefault();
-        el.style.transform = 'scale(0.97)';
-        setTimeout(() => el.style.transform = '', 300);
+    Object.entries(personaMap).forEach(([id, persona]) => {
+      const card = document.getElementById(id);
+      if (!card) return;
+      card.addEventListener('click', () => {
+        // Visual feedback
+        card.style.transform = 'scale(0.97)';
+        setTimeout(() => {
+          localStorage.setItem('luna_persona', persona);
+          window.location.href = '/';
+        }, 200);
+      });
+      card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') card.click();
       });
     });
 
@@ -749,8 +752,6 @@
         const rect = card.getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width  - 0.5) * 12;
         const y = ((e.clientY - rect.top)  / rect.height - 0.5) * -12;
-        card.style.setProperty('--tilt-x', `${y}deg`);
-        card.style.setProperty('--tilt-y', `${x}deg`);
         card.style.transform = `translateY(-8px) scale(1.02) perspective(800px) rotateX(${y}deg) rotateY(${x}deg)`;
       });
       card.addEventListener('mouseleave', () => {

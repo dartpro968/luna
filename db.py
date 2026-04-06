@@ -1,168 +1,223 @@
-import sqlite3
+"""
+Luna AI - Supabase Database Layer
+Replaces local SQLite with Supabase (Postgres + Auth).
+"""
 import os
+import datetime
+from supabase import create_client, Client
+from dotenv import load_dotenv
 
-DB_PATH = 'chat_history.db'
+load_dotenv()
 
-def get_connection():
-    return sqlite3.connect(DB_PATH)
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
-def init_db():
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        
-        # Create users table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
-                name TEXT NOT NULL,
-                dob TEXT NOT NULL,
-                coins INTEGER DEFAULT 5,
-                last_free_claim TEXT DEFAULT ''
-            )
-        ''')
-        
-        # Create messages table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                role TEXT NOT NULL,
-                content TEXT NOT NULL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(user_id) REFERENCES users(id)
-            )
-        ''')
-        
-        # Migrations
-        try:
-            cursor.execute('''ALTER TABLE messages ADD COLUMN user_id INTEGER DEFAULT 1''')
-        except sqlite3.OperationalError:
-            pass # Column already exists
+# Use the service-role key on the backend (bypasses RLS for admin operations)
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-        # Migration: Add coins and last_free_claim to existing users
-        try:
-            cursor.execute('''ALTER TABLE users ADD COLUMN coins INTEGER DEFAULT 5''')
-            cursor.execute('''ALTER TABLE users ADD COLUMN last_free_claim TEXT DEFAULT ""''')
-        except sqlite3.OperationalError:
-            pass # Column already exists
-            
-        conn.commit()
 
-def create_user(username, password, name, dob):
+# ──────────────────────────────────────────────
+# Auth helpers
+# ──────────────────────────────────────────────
+
+def create_user(email: str, password: str, name: str, dob: str):
+    """
+    Register a new user via Supabase Auth, then create their profile row.
+    Returns (user_id, name) on success, or None on failure.
+    """
     import datetime
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     try:
-        with get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('INSERT INTO users (username, password, name, dob, coins, last_free_claim) VALUES (?, ?, ?, ?, ?, ?)', 
-                           (username, password, name, dob, 5, today))
-            conn.commit()
-            return cursor.lastrowid
-    except sqlite3.IntegrityError:
-        return None  # Username already exists
+        res = supabase.auth.admin.create_user({
+            "email": email,
+            "password": password,
+            "email_confirm": True   # skip confirmation email for now
+        })
+        user_id = res.user.id
 
-def verify_user(username, password):
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT id, name, dob, coins FROM users WHERE username = ? AND password = ?', (username, password))
-        return cursor.fetchone()
+        # Insert profile
+        supabase.table("profiles").insert({
+            "id": user_id,
+            "name": name,
+            "dob": dob,
+            "coins": 5,
+            "last_free_claim": today
+        }).execute()
 
-def verify_google_user(email, name):
-    """Authenticate or create a Google user."""
+        return user_id
+    except Exception as e:
+        print(f"create_user error: {e}")
+        return None
+
+
+def verify_user(email: str, password: str):
+    """
+    Email/password sign-in via Supabase Auth.
+    Returns (user_id, name, dob, coins) or None.
+    """
+    try:
+        res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        user_id = res.user.id
+        profile = supabase.table("profiles").select("name, dob, coins").eq("id", user_id).single().execute()
+        d = profile.data
+        return (user_id, d["name"], d["dob"], d["coins"])
+    except Exception as e:
+        print(f"verify_user error: {e}")
+        return None
+
+
+def verify_google_user(email: str, name: str):
+    """
+    Look up existing Google/OAuth user by email, or create a new profile.
+    Returns ((user_id, name, dob, coins), is_new).
+    """
     import datetime
     today = datetime.datetime.now().strftime("%Y-%m-%d")
+    try:
+        # Look up by email in Auth admin API
+        users_res = supabase.auth.admin.list_users()
+        existing_user = next((u for u in users_res if u.email == email), None)
 
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT id, name, dob, coins FROM users WHERE username = ?', (email,))
-        user = cursor.fetchone()
-        
-        if user:
-            return user, False # (user_tuple, is_new_user)
+        if existing_user:
+            user_id = existing_user.id
+            profile_res = supabase.table("profiles").select("name, dob, coins").eq("id", user_id).maybe_single().execute()
+            if profile_res.data:
+                d = profile_res.data
+                return (user_id, d["name"], d["dob"], d["coins"]), False
+            else:
+                # Profile missing — create it
+                supabase.table("profiles").insert({
+                    "id": user_id, "name": name, "dob": "", "coins": 5, "last_free_claim": today
+                }).execute()
+                return (user_id, name, "", 5), True
         else:
-            cursor.execute('INSERT INTO users (username, password, name, dob, coins, last_free_claim) VALUES (?, ?, ?, ?, ?, ?)',
-                           (email, "GOOGLE_AUTH", name, "", 5, today))
-            conn.commit()
-            new_id = cursor.lastrowid
-            return (new_id, name, "", 5), True
+            # Brand new Google user: create auth entry + profile
+            res = supabase.auth.admin.create_user({
+                "email": email,
+                "email_confirm": True,
+                "user_metadata": {"name": name}
+            })
+            user_id = res.user.id
+            supabase.table("profiles").insert({
+                "id": user_id, "name": name, "dob": "", "coins": 5, "last_free_claim": today
+            }).execute()
+            return (user_id, name, "", 5), True
+    except Exception as e:
+        print(f"verify_google_user error: {e}")
+        return None
 
-def update_user_dob(user_id, dob):
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('UPDATE users SET dob = ? WHERE id = ?', (dob, user_id))
-        conn.commit()
 
-def get_user_by_id(user_id):
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT name, dob, coins FROM users WHERE id = ?', (user_id,))
-        return cursor.fetchone()
+def verify_token(token: str):
+    """
+    Validate a Supabase JWT and return the user_id, or None if invalid.
+    """
+    try:
+        res = supabase.auth.get_user(token)
+        return res.user.id
+    except Exception:
+        return None
 
-def deduct_coin(user_id):
-    """Safely deducts 1 coin if they have a balance."""
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('UPDATE users SET coins = coins - 1 WHERE id = ? AND coins > 0', (user_id,))
-        conn.commit()
-        return cursor.rowcount > 0
 
-def add_coins(user_id, amount):
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('UPDATE users SET coins = coins + ? WHERE id = ?', (amount, user_id))
-        conn.commit()
+# ──────────────────────────────────────────────
+# Profile helpers
+# ──────────────────────────────────────────────
 
-def check_and_grant_daily_coins(user_id):
-    """Grants 3 daily coins strictly if a new day has started."""
-    import datetime
-    today = datetime.datetime.now().strftime("%Y-%m-%d")
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT last_free_claim, coins FROM users WHERE id = ?', (user_id,))
-        row = cursor.fetchone()
-        if not row: return False
-        
-        last_claim, current_coins = row
-        if last_claim != today:
-            # It's a new day! Grant exactly 3 coins, and update the claim date.
-            # (Does not exceed or stack past 3 free coins for the day)
-            new_balance = current_coins + 3
-            cursor.execute('UPDATE users SET last_free_claim = ?, coins = ? WHERE id = ?', (today, new_balance, user_id))
-            conn.commit()
-            return True
+def update_user_dob(user_id: str, dob: str):
+    supabase.table("profiles").update({"dob": dob}).eq("id", user_id).execute()
+
+
+def get_user_by_id(user_id: str):
+    """Returns (name, dob, coins) or None."""
+    try:
+        res = supabase.table("profiles").select("name, dob, coins").eq("id", user_id).single().execute()
+        d = res.data
+        return (d["name"], d["dob"], d["coins"])
+    except Exception:
+        return None
+
+
+def deduct_coin(user_id: str) -> bool:
+    """Deducts 1 coin if balance > 0. Returns True on success."""
+    try:
+        profile = supabase.table("profiles").select("coins").eq("id", user_id).single().execute()
+        coins = profile.data["coins"]
+        if coins <= 0:
+            return False
+        supabase.table("profiles").update({"coins": coins - 1}).eq("id", user_id).execute()
+        return True
+    except Exception:
         return False
 
-def save_message(user_id, role, content):
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('INSERT INTO messages (user_id, role, content) VALUES (?, ?, ?)', (user_id, role, content))
-        conn.commit()
 
-def get_history(user_id, limit=200):
-    """Retrieve up to 'limit' messages for a specific user, returned in chronological order"""
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT role, content 
-            FROM (
-                SELECT role, content, id 
-                FROM messages 
-                WHERE user_id = ?
-                ORDER BY id DESC 
-                LIMIT ?
-            ) 
-            ORDER BY id ASC
-        ''', (user_id, limit))
-        rows = cursor.fetchall()
-        return [{"role": row[0], "content": row[1]} for row in rows]
+def add_coins(user_id: str, amount: int):
+    try:
+        profile = supabase.table("profiles").select("coins").eq("id", user_id).single().execute()
+        current = profile.data["coins"]
+        supabase.table("profiles").update({"coins": current + amount}).eq("id", user_id).execute()
+    except Exception as e:
+        print(f"add_coins error: {e}")
 
-def clear_history(user_id):
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('DELETE FROM messages WHERE user_id = ?', (user_id,))
-        conn.commit()
 
-# Ensure the DB is initialized when this module is imported
-init_db()
+def check_and_grant_daily_coins(user_id: str) -> bool:
+    """Grants 3 daily coins if it's a new day."""
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    try:
+        res = supabase.table("profiles").select("last_free_claim, coins").eq("id", user_id).single().execute()
+        d = res.data
+        if d["last_free_claim"] != today:
+            new_balance = d["coins"] + 3
+            supabase.table("profiles").update({
+                "coins": new_balance,
+                "last_free_claim": today
+            }).eq("id", user_id).execute()
+            return True
+        return False
+    except Exception as e:
+        print(f"check_and_grant_daily_coins error: {e}")
+        return False
+
+
+# ──────────────────────────────────────────────
+# Messages helpers
+# ──────────────────────────────────────────────
+
+def save_message(user_id: str, role: str, content: str, persona: str = "luna"):
+    """Save a message for a specific user + persona thread."""
+    try:
+        supabase.table("messages").insert({
+            "user_id": user_id,
+            "role": role,
+            "content": content,
+            "persona": persona
+        }).execute()
+    except Exception as e:
+        print(f"save_message error: {e}")
+
+
+def get_history(user_id: str, persona: str = "luna", limit: int = 200):
+    """Returns list of {role, content} dicts for a specific user + persona."""
+    try:
+        res = (
+            supabase.table("messages")
+            .select("role, content")
+            .eq("user_id", user_id)
+            .eq("persona", persona)
+            .order("id", desc=False)
+            .limit(limit)
+            .execute()
+        )
+        return [{"role": r["role"], "content": r["content"]} for r in res.data]
+    except Exception as e:
+        print(f"get_history error: {e}")
+        return []
+
+
+def clear_history(user_id: str, persona: str = None):
+    """Clear messages for a user. If persona given, clears only that thread."""
+    try:
+        q = supabase.table("messages").delete().eq("user_id", user_id)
+        if persona:
+            q = q.eq("persona", persona)
+        q.execute()
+    except Exception as e:
+        print(f"clear_history error: {e}")

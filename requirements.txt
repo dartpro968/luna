@@ -49,3 +49,4 @@ google-auth
 requests
 razorpay
 gunicorn
+supabase
