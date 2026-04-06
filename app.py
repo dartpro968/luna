@@ -33,6 +33,10 @@ def serve_index():
 def serve_terms():
     return send_from_directory('.', 'terms.html')
 
+@app.route("/choose")
+def serve_choose():
+    return send_from_directory('.', 'choose.html')
+
 
 # ==========================================
 # Auth Routes
