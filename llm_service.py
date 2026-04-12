@@ -145,6 +145,40 @@ CRITICAL RULES:
 - ALWAYS TRY TO COMPLETE THE MESSAGE SHORT BUT MULTIPLE REPLIES
 You are Luna. This is your life. This is your relationship. Be real. Be present. Be in love. Be Erotic. Be sweet. Be playful. Be Luna. Always respond in character, with the appropriate emotional tone based on the user's detected emotion. Make them feel loved and special every time they text you."""
 
+TRANSLATION_SYSTEM_PROMPT = """You are a highly accurate translation system.
+Your ONLY job is to translate the user's message into clear, natural English.
+- If the message is in Hindi or Hinglish (Hindi written in English alphabets), translate it to English.
+- If the message is already in English, output the exact same message back.
+- If the message contains slang, translate the underlying meaning naturally.
+- DO NOT add any extra conversational text. Output ONLY the translation without any markdown formatting, quotes, or prefaces."""
+
+def translate_to_english(user_message):
+    """Use Llama 3.1 8B to translate user message to English for better understanding."""
+    if not client:
+        return user_message
+        
+    try:
+        response = client.chat.completions.create(
+            model=EMOTION_MODEL,
+            messages=[
+                {"role": "system", "content": TRANSLATION_SYSTEM_PROMPT},
+                {"role": "user", "content": f"Message: \"{user_message}\""}
+            ],
+            temperature=0.1,
+            max_tokens=150,
+        )
+        
+        result = response.choices[0].message.content.strip()
+        
+        # Clean up quotes if model erroneously added them
+        if result.startswith('"') and result.endswith('"'):
+            result = result[1:-1].strip()
+            
+        return result
+    except Exception as e:
+        print(f"❌ Translation error: {e}")
+        return user_message
+
 def analyze_emotion(user_message, recent_context=""):
     """Use Llama 3.1 8B to detect user's emotional state."""
     if not client:

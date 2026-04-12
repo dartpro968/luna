@@ -76,7 +76,8 @@ def verify_google_user(email: str, name: str):
     try:
         # Look up by email in Auth admin API
         users_res = supabase.auth.admin.list_users()
-        existing_user = next((u for u in users_res if u.email == email), None)
+        email_lower = email.lower()
+        existing_user = next((u for u in users_res if u.email and u.email.lower() == email_lower), None)
 
         if existing_user:
             user_id = existing_user.id
@@ -103,8 +104,10 @@ def verify_google_user(email: str, name: str):
             }).execute()
             return (user_id, name, "", 5), True
     except Exception as e:
-        print(f"verify_google_user error: {e}")
-        return None
+        import traceback
+        err_msg = traceback.format_exc()
+        print(f"verify_google_user error: {err_msg}")
+        return None, str(e)
 
 
 def verify_token(token: str):

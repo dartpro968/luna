@@ -13,7 +13,7 @@ import razorpay
 
 import db
 import turso_db
-from llm_service import analyze_emotion, generate_girlfriend_response, EMOTION_MODEL, PERSONA_MODEL, client
+from llm_service import analyze_emotion, generate_girlfriend_response, EMOTION_MODEL, PERSONA_MODEL, client, translate_to_english
 from llm_service_priya import generate_priya_response
 from llm_service_sofia import generate_sofia_response
 from llm_service_nara import generate_nara_response
@@ -194,8 +194,11 @@ def google_login():
 
         # 2. Find or create Supabase user + profile
         result = db.verify_google_user(email, name)
-        if result is None:
-            return jsonify({"error": "Failed to create/find user in database"}), 500
+        
+        # Unpack result which can be ((user_data), is_new) OR (None, error_msg)
+        if result[0] is None:
+            err_details = result[1] if len(result) > 1 else "Unknown"
+            return jsonify({"error": f"Database Error: {err_details}"}), 500
 
         user_data, is_new = result
         user_id, retrieved_name, dob, coins = user_data
@@ -344,7 +347,9 @@ def chat():
             )
 
         # STEP 1: Intelligence Analysis (Emotion + Fact Extraction)
-        intelligence_data = analyze_emotion(user_message, recent_context)
+        translated_message = translate_to_english(user_message)
+        print(f"🌍 Translated Input: {translated_message}")
+        intelligence_data = analyze_emotion(translated_message, recent_context)
         emotion_data = {
             "emotion": intelligence_data.get("emotion", "neutral"),
             "intensity": intelligence_data.get("intensity", "medium"),
@@ -362,8 +367,10 @@ def chat():
 
         # STEP 2: Generate Personalized Persona Response
         generate_fn = PERSONA_SERVICES[persona]
+        enhanced_message = f"{user_message}\n[Contextual English Translation: {translated_message}]" if translated_message != user_message else user_message
+        
         response_text = generate_fn(
-            user_message, emotion_data, conversation_history, user_name, user_memory=user_memory
+            enhanced_message, emotion_data, conversation_history, user_name, user_memory=user_memory
         )
         print(f"💜 {persona}: {response_text}")
 

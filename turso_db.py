@@ -53,10 +53,10 @@ def get_full_history(user_id, persona, limit=50):
     client = get_client()
     try:
         result = client.execute(
-            "SELECT role, content FROM conversation_history WHERE user_id = ? AND persona = ? ORDER BY created_at ASC LIMIT ?",
+            "SELECT role, content FROM (SELECT * FROM conversation_history WHERE user_id = ? AND persona = ? ORDER BY created_at DESC LIMIT ?) ORDER BY created_at ASC",
             (user_id, persona, limit)
         )
-        return [{"role": row[0], "content": row[1]} for row in result.rows]
+        return [{"role": row[0], "content": row[1]} for row in result.fetchall()]
     finally:
         client.close()
 
@@ -80,7 +80,7 @@ def get_user_memory(user_id):
             "SELECT key, value FROM user_memory WHERE user_id = ?",
             (user_id,)
         )
-        return {row[0]: row[1] for row in result.rows}
+        return {row[0]: row[1] for row in result.fetchall()}
     finally:
         client.close()
 
