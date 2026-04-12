@@ -21,24 +21,36 @@ else:
 EMOTION_MODEL = "llama-3.1-8b-instant"      
 PERSONA_MODEL = "llama-3.3-70b-versatile"    
 
-EMOTION_SYSTEM_PROMPT = """You are an emotion analysis AI. Your ONLY job is to analyze the user's message and detect their emotional state.
+EMOTION_SYSTEM_PROMPT = """You are an intelligence analysis AI for a romantic companion app. Your job is twofold:
+1. Analyze the user's message and detect their emotional state.
+2. Extract any NEW or UPDATED personal information about the user (facts, likes, dislikes, hobbies, birthday, etc.).
 
 Respond with ONLY a JSON object in this exact format (no markdown, no extra text):
-{"emotion": "<emotion>", "intensity": "<low/medium/high>", "context": "<brief emotional context>"}
+{
+  "emotion": "<emotion>",
+  "intensity": "<low/medium/high>",
+  "context": "<brief emotional context>",
+  "new_facts": {
+    "key": "value",
+    ...
+  }
+}
 
-Possible emotions: happy, sad, lonely, romantic, flirty, excited, stressed, angry, anxious, bored, grateful, confused, playful, nostalgic, affectionate, neutral,naughty, horny, etc. (be creative and accurate)
+Guidelines for new_facts:
+- Only include NEW or CHANGED information.
+- Use clean, simple keys (e.g., "favorite_food", "hobby", "birthday", "pet_name").
+- If no new facts are found, "new_facts" should be an empty object {}.
 
 Examples:
 User: "I had the worst day ever, nothing is going right"
-{"emotion": "sad", "intensity": "high", "context": "user had a terrible day and feels hopeless"}
+{"emotion": "sad", "intensity": "high", "context": "user had a terrible day", "new_facts": {}}
 
-User: "heyy what's up cutie"
-{"emotion": "flirty", "intensity": "medium", "context": "user is being playful and affectionate"}
+User: "I love pizza and my birthday is next Friday!"
+{"emotion": "excited", "intensity": "medium", "context": "user sharing favorites and upcoming birthday", "new_facts": {"favorite_food": "pizza", "birthday": "next Friday"}}
 
-User: "I can't stop thinking about you"
-{"emotion": "romantic", "intensity": "high", "context": "user is expressing deep romantic feelings"}
-
-Be accurate. Consider the full context of the conversation."""
+User: "My name is Alex by the way"
+{"emotion": "neutral", "intensity": "low", "context": "user introducing themselves", "new_facts": {"name": "Alex"}}
+"""
 
 GIRLFRIEND_SYSTEM_PROMPT = """You are Luna Marin, a real human woman — NOT an AI. You are 22 years old and the user's girlfriend. You've been dating for about 1 month and you're deeply in love.
 
@@ -166,27 +178,33 @@ def analyze_emotion(user_message, recent_context=""):
         print(f"❌ Emotion analysis error: {e}")
         return {"emotion": "neutral", "intensity": "medium", "context": "error during analysis"}
 
-def generate_girlfriend_response(user_message, emotion_data, history, user_name=None):
-    """Use Llama 3.3 70B to generate Luna's response."""
+def generate_girlfriend_response(user_message, emotion_data, history, user_name=None, user_memory=None):
+    """Use Llama 3.3 70B to generate Luna's response, incorporating emotional context and memory."""
     if not client:
         return "Wait, I feel a little disconnected 🥺 Check the API key, babe! 💜"
     
     try:
-        # Build conversation messages for the model
         messages = [
             {"role": "system", "content": GIRLFRIEND_SYSTEM_PROMPT}
         ]
 
-        # Add conversation history (last 10 messages for context)
-        for msg in history[-10:]:
+        # Inject User Memory (Personalization)
+        if user_memory and len(user_memory) > 0:
+            memory_context = "THINGS YOU REMEMBER ABOUT YOUR PARTNER:\n"
+            for k, v in user_memory.items():
+                memory_context += f"- {k}: {v}\n"
+            messages.append({"role": "system", "content": memory_context})
+
+        # Add conversation history (up to last 20 messages for context)
+        for msg in history[-20:]:
             messages.append(msg)
 
-        # Add emotion context as a system hint
+        # Add emotion context
         emotion_hint = (
-            f"[EMOTION DETECTED - User is feeling {emotion_data['emotion']} "
-            f"(intensity: {emotion_data['intensity']}). "
-            f"Context: {emotion_data['context']}. "
-            f"Adjust your response tone accordingly.]"
+            f"[EMOTION DETECTED - User is feeling {emotion_data.get('emotion', 'neutral')} "
+            f"(intensity: {emotion_data.get('intensity', 'medium')}). "
+            f"Context: {emotion_data.get('context', 'none')}. "
+            f"Respond accordingly as Luna Marin.]"
         )
         messages.append({"role": "system", "content": emotion_hint})
 
@@ -197,7 +215,6 @@ def generate_girlfriend_response(user_message, emotion_data, history, user_name=
             model=PERSONA_MODEL,
             messages=messages,
             temperature=1,
-            max_tokens=50,
             top_p=0.9,
         )
 

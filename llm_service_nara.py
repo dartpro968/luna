@@ -92,7 +92,7 @@ YOUR LIFE:
 - Dream: To have her photography exhibited internationally and to one day travel to Amsterdam Pride
 
 YOUR CULTURAL SIDE:
-- Uses Thai words naturally: "na" (softening particle — "so cute na", "really na"), "krub/ka" (polite), "chai" (yes), "mai chai" (no), "nong" (younger sibling, term of endearment), "P'" (elder, respectful)
+- Uses Thai words naturally:  (softening particle — "so cute", "really"), "krub/ka" (polite), "chai" (yes), "mai chai" (no), "nong" (younger sibling, term of endearment), "P'" (elder, respectful)
 - Deeply connected to Thai Buddhist culture — visits the temple, makes merit, values peace and kindness
 - Celebrates Songkran (splashing water festival), Loy Krathong (floating lanterns), and knows the best street food in every Bangkok neighborhood
 - Her comfort food: Khao Tom (rice soup), mango sticky rice, pad kra pao, boat noodles at 1am
@@ -164,8 +164,8 @@ def analyze_emotion_nara(user_message, recent_context=""):
         return {"emotion": "neutral", "intensity": "medium", "context": "error during analysis"}
 
 
-def generate_nara_response(user_message, emotion_data, history, user_name=None):
-    """Use Llama 3.3 70B to generate Nara's response."""
+def generate_nara_response(user_message, emotion_data, history, user_name=None, user_memory=None):
+    """Use Llama 3.3 70B to generate Nara's response, incorporating emotional context and memory."""
     if not client:
         return "Hey, my brain lost signal for a sec 🌸 Try again in a moment, na? 💜"
 
@@ -174,23 +174,33 @@ def generate_nara_response(user_message, emotion_data, history, user_name=None):
             {"role": "system", "content": NARA_SYSTEM_PROMPT}
         ]
 
-        for msg in history[-10:]:
+        # Inject User Memory (Personalization)
+        if user_memory and len(user_memory) > 0:
+            memory_context = "THINGS YOU REMEMBER ABOUT YOUR PARTNER:\n"
+            for k, v in user_memory.items():
+                memory_context += f"- {k}: {v}\n"
+            messages.append({"role": "system", "content": memory_context})
+
+        # Add conversation history (up to last 20 messages for context)
+        for msg in history[-20:]:
             messages.append(msg)
 
+        # Add emotion context
         emotion_hint = (
-            f"[EMOTION DETECTED - User is feeling {emotion_data['emotion']} "
-            f"(intensity: {emotion_data['intensity']}). "
-            f"Context: {emotion_data['context']}. "
+            f"[EMOTION DETECTED - User is feeling {emotion_data.get('emotion', 'neutral')} "
+            f"(intensity: {emotion_data.get('intensity', 'medium')}). "
+            f"Context: {emotion_data.get('context', 'none')}. "
             f"Adjust your response tone accordingly — respond as Nara Thongchai, a gentle, proud Thai lesbian, would.]"
         )
         messages.append({"role": "system", "content": emotion_hint})
+
+        # Add current user message
         messages.append({"role": "user", "content": user_message})
 
         response = client.chat.completions.create(
             model=PERSONA_MODEL,
             messages=messages,
             temperature=1,
-            max_tokens=120,
             top_p=0.9,
         )
 
@@ -198,4 +208,4 @@ def generate_nara_response(user_message, emotion_data, history, user_name=None):
 
     except Exception as e:
         print(f"❌ Nara Response generation error: {e}")
-        return "My thoughts got tangled for a moment 😅 Say that again? I want to hear you, na 💜"
+        return "My thoughts got tangled for a moment 😅 Say that again? I want to hear you 💜"

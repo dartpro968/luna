@@ -12,7 +12,44 @@ import os
 import razorpay
 
 import db
+import turso_db
 from llm_service import analyze_emotion, generate_girlfriend_response, EMOTION_MODEL, PERSONA_MODEL, client
+from llm_service_priya import generate_priya_response
+from llm_service_sofia import generate_sofia_response
+from llm_service_nara import generate_nara_response
+
+PERSONA_SERVICES = {
+    "luna":  generate_girlfriend_response,
+    "priya": generate_priya_response,
+    "sofia": generate_sofia_response,
+    "nara":  generate_nara_response
+}
+
+def split_response(text):
+    """Splits a long response into smaller chunks (sentinel and paragraph based)."""
+    if not text: return []
+    # Try splitting by newlines first
+    paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+    
+    final_chunks = []
+    for p in paragraphs:
+        if len(p) > 200:
+            # Further split by sentence if still too long
+            import re
+            sentences = re.split(r'(?<=[.!?]) +', p)
+            temp = ""
+            for s in sentences:
+                if len(temp) + len(s) < 200:
+                    temp += (" " + s if temp else s)
+                else:
+                    final_chunks.append(temp)
+                    temp = s
+            if temp: final_chunks.append(temp)
+        else:
+            final_chunks.append(p)
+            
+    # Limit to max 3 chunks for "rapid fire" feel
+    return final_chunks[:3]
 
 # Load environment variables
 load_dotenv()
@@ -176,7 +213,7 @@ def google_login():
         # 4. Exchange hashed_token → real Supabase JWT session
         verify_resp = http_requests.post(
             f"{supabase_url}/auth/v1/verify",
-            json={"type": "magiclink", "token": hashed_token},
+            json={"type": "magiclink", "token_hash": hashed_token},
             headers={
                 "apikey": supabase_anon_key,
                 "Content-Type": "application/json"
@@ -277,45 +314,82 @@ def chat():
         if not user_info:
             return jsonify({"error": "Unauthorized"}), 401
 
-        user_name  = user_info[0]
-        user_coins = user_info[2]
+        user_name  = user_info[0] or "Babe"
+        user_coins = user_info[2] or 0
 
-        if user_coins <= 0:
-            return jsonify({"error": "insufficient_coins", "require_payment": True}), 403
+        # Get persona
+        persona = data.get("persona", "luna").lower()
+        if persona not in PERSONA_SERVICES:
+            persona = "luna"
 
-        # Get conversation history
-        conversation_history = db.get_history(user_id=user_id, limit=200)
+        # ── TURSO INTEGRATION: Fetch Memory & History ──────────
+        user_memory = turso_db.get_user_memory(user_id)
+        
+        # Initial Migration: Sync Supabase profile data to Turso Memory if empty
+        if not user_memory:
+            print("🚀 Migrating initial profile data to Turso Memory...")
+            if user_name: turso_db.upsert_user_memory(user_id, "name", user_name)
+            if user_info[1]: turso_db.upsert_user_memory(user_id, "birthday", user_info[1])
+            user_memory = turso_db.get_user_memory(user_id)
 
-        # Recent context for emotion analysis
+        # Fetch history from Turso (limit 20 for maximum context)
+        conversation_history = turso_db.get_full_history(user_id, persona, limit=20)
+
+        # Recent context string for emotion analysis
         recent_context = ""
         if conversation_history:
             msgs = conversation_history[-6:]
             recent_context = "\n".join(
-                [f"{'User' if m['role'] == 'user' else 'Luna'}: {m['content']}" for m in msgs]
+                [f"{'User' if m['role'] == 'user' else 'Partner'}: {m['content']}" for m in msgs]
             )
 
-        # STEP 1: Emotion Analysis
-        emotion_data = analyze_emotion(user_message, recent_context)
-        print(f"🧠 Emotion: {emotion_data}")
+        # STEP 1: Intelligence Analysis (Emotion + Fact Extraction)
+        intelligence_data = analyze_emotion(user_message, recent_context)
+        emotion_data = {
+            "emotion": intelligence_data.get("emotion", "neutral"),
+            "intensity": intelligence_data.get("intensity", "medium"),
+            "context": intelligence_data.get("context", "")
+        }
+        
+        # Update User Memory in Turso DB with new facts
+        new_facts = intelligence_data.get("new_facts", {})
+        for k, v in new_facts.items():
+            print(f"🧠 New Fact Learned: {k} -> {v}")
+            turso_db.upsert_user_memory(user_id, k, v)
+        
+        # Reload memory after updates
+        user_memory = turso_db.get_user_memory(user_id)
 
-        # STEP 2: Generate Response
-        response_text = generate_girlfriend_response(
-            user_message, emotion_data, conversation_history, user_name
+        # STEP 2: Generate Personalized Persona Response
+        generate_fn = PERSONA_SERVICES[persona]
+        response_text = generate_fn(
+            user_message, emotion_data, conversation_history, user_name, user_memory=user_memory
         )
-        print(f"💜 Luna: {response_text}")
+        print(f"💜 {persona}: {response_text}")
 
-        # Save to DB
-        db.save_message(user_id, "user", user_message)
-        db.save_message(user_id, "assistant", response_text)
+        # Split into multiple replies if long / rapid fire
+        replies = split_response(response_text)
 
-        # Deduct coin
+        # ── TURSO INTEGRATION: Save History ─────────────────────
+        # Save user message
+        turso_db.append_history(user_id, persona, "user", user_message)
+        # Save each assistant reply
+        for r in replies:
+            turso_db.append_history(user_id, persona, "assistant", r)
+
+        # Keep Supabase mirrored for legacy compatibility (optional)
+        db.save_message(user_id, "user", user_message, persona=persona)
+        for r in replies:
+            db.save_message(user_id, "assistant", r, persona=persona)
+
+        # Deduct coin (one coin per exchange)
         db.deduct_coin(user_id)
 
         return jsonify({
-            "reply": response_text,
+            "replies": replies,
             "emotion": emotion_data.get("emotion", "neutral"),
             "intensity": emotion_data.get("intensity", "medium"),
-            "coins_remaining": user_coins - 1
+            "coins_remaining": max(0, user_coins - 1)
         })
 
     except Exception as e:
@@ -331,7 +405,11 @@ def clear_chat():
         return jsonify({"error": "Unauthorized"}), 401
     data    = request.get_json(silent=True) or {}
     persona = data.get("persona", None)   # if provided, clear only that persona's thread
+    
+    # Clear both legacy and new primary history
     db.clear_history(user_id, persona=persona)
+    turso_db.clear_persona_history(user_id, persona)
+    
     return jsonify({"status": "cleared"})
 
 
@@ -428,6 +506,13 @@ def admin_boost():
 
 if __name__ == "__main__":
     print("\n💜 Luna AI Girlfriend Backend Starting...")
+    
+    # Initialize Turso DB tables
+    try:
+        turso_db.init_db()
+        print("✅ Turso DB Connected & Initialized")
+    except Exception as e:
+        print(f"❌ Turso DB Initialization Failed: {e}")
     print(f"🧠 Emotion Model: {EMOTION_MODEL}")
     print(f"💬 Persona Model: {PERSONA_MODEL}")
     print("🗄️  Database: Supabase (cloud Postgres)")

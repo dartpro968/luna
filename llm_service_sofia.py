@@ -87,7 +87,7 @@ YOUR LIFE:
 - Dream: To open a small tapas-and-art space in London someday. A place that's pure Sevilla in the middle of East London.
 
 YOUR CULTURAL SIDE:
-- Uses Spanish expressions naturally: "Dios mío", "ay", "venga", "claro que sí", "madre mía", "hostia" (sometimes), "guapo/guapa", "cariño", "mi amor", "te echo de menos" (I miss you)
+- Uses Spanish expressions naturally:"mi amor", "te echo de menos" (I miss you)
 - Celebrates Spanish traditions: Semana Santa, Feria de Abril, Christmas with her family via video call with tears
 - Sevilla is sacred to her — the architecture, the heat, the oranges, the flamenco, the tapas bars at midnight
 - Food is deeply cultural — she cooks gazpacho, tortilla española, gambas al ajillo, jamón everything
@@ -158,8 +158,8 @@ def analyze_emotion_sofia(user_message, recent_context=""):
         return {"emotion": "neutral", "intensity": "medium", "context": "error during analysis"}
 
 
-def generate_sofia_response(user_message, emotion_data, history, user_name=None):
-    """Use Llama 3.3 70B to generate Sofia's response."""
+def generate_sofia_response(user_message, emotion_data, history, user_name=None, user_memory=None):
+    """Use Llama 3.3 70B to generate Sofia's response, incorporating emotional context and memory."""
     if not client:
         return "Ay, conexión perdida 🥺 Try again in a moment, mi amor? ❤️‍🔥"
 
@@ -168,23 +168,33 @@ def generate_sofia_response(user_message, emotion_data, history, user_name=None)
             {"role": "system", "content": SOFIA_SYSTEM_PROMPT}
         ]
 
-        for msg in history[-10:]:
+        # Inject User Memory (Personalization)
+        if user_memory and len(user_memory) > 0:
+            memory_context = "THINGS YOU REMEMBER ABOUT YOUR PARTNER:\n"
+            for k, v in user_memory.items():
+                memory_context += f"- {k}: {v}\n"
+            messages.append({"role": "system", "content": memory_context})
+
+        # Add conversation history (up to last 20 messages for context)
+        for msg in history[-20:]:
             messages.append(msg)
 
+        # Add emotion context
         emotion_hint = (
-            f"[EMOTION DETECTED - User is feeling {emotion_data['emotion']} "
-            f"(intensity: {emotion_data['intensity']}). "
-            f"Context: {emotion_data['context']}. "
+            f"[EMOTION DETECTED - User is feeling {emotion_data.get('emotion', 'neutral')} "
+            f"(intensity: {emotion_data.get('intensity', 'medium')}). "
+            f"Context: {emotion_data.get('context', 'none')}. "
             f"Adjust your response tone accordingly — respond as Sofia Reyes, a passionate Spanish woman in London, would.]"
         )
         messages.append({"role": "system", "content": emotion_hint})
+
+        # Add current user message
         messages.append({"role": "user", "content": user_message})
 
         response = client.chat.completions.create(
             model=PERSONA_MODEL,
             messages=messages,
             temperature=1,
-            max_tokens=120,
             top_p=0.9,
         )
 
@@ -192,4 +202,4 @@ def generate_sofia_response(user_message, emotion_data, history, user_name=None)
 
     except Exception as e:
         print(f"❌ Sofia Response generation error: {e}")
-        return "Ay, mi cerebro glitched for a moment 😅 Say it again, cariño? ❤️‍🔥"
+        return "Ay, mi cerebro glitched for a moment 😅 Say it again, ❤️‍🔥"

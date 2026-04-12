@@ -523,15 +523,33 @@ async function handleUserMessage(text) {
     scrollToBottom();
 
     const result = await sendToAPI(text);
-    typingIndicator.classList.remove("show");
 
-    if (result && !result.is_error) {
-        addMessage(result.reply, "bot", result.emotion);
-        if (result.coins_remaining !== undefined) updateCoins(result.coins_remaining);
+    if (result && !result.is_error && result.replies) {
+        // Handle multiple replies (rapid fire mode)
+        for (let i = 0; i < result.replies.length; i++) {
+            // Keep typing indicator on if there are more messages coming
+            typingIndicator.classList.add("show");
+            scrollToBottom();
+
+            // Artificial delay based on message length
+            const delay = Math.min(2000, 500 + result.replies[i].length * 20);
+            await new Promise(r => setTimeout(r, delay));
+
+            typingIndicator.classList.remove("show");
+            addMessage(result.replies[i], "bot", result.emotion);
+            if (result.coins_remaining !== undefined && i === 0) updateCoins(result.coins_remaining);
+            
+            // Short gap between messages if it's not the last one
+            if (i < result.replies.length - 1) {
+                await new Promise(r => setTimeout(r, 600));
+            }
+        }
     } else if (result && result.is_error) {
+        typingIndicator.classList.remove("show");
         const lastUserNode = chatArea.lastChild;
-        chatArea.removeChild(lastUserNode);
+        if (lastUserNode) chatArea.removeChild(lastUserNode);
     } else {
+        typingIndicator.classList.remove("show");
         const cfg = PERSONAS[currentPersona] || PERSONAS.luna;
         addMessage(`Oops! ${cfg.name}'s connection dropped for a second. 🥺 Try again?`, "bot", "lonely");
     }
