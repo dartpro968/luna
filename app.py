@@ -69,13 +69,23 @@ razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 def get_current_user_id():
     """
-    Extract and validate the Supabase JWT from the Authorization header.
+    Extract and validate the JWT from the Authorization header.
     Returns user_id (str) or None.
     """
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
         return None
     token = auth_header.split(" ", 1)[1]
+    
+    # Check for custom Google JWT first
+    import jwt
+    try:
+        payload = jwt.decode(token, os.getenv("JWT_SECRET", "luna-secret-key-123"), algorithms=["HS256"])
+        return payload.get("user_id")
+    except Exception:
+        pass
+
+    # Fallback to Supabase JWT verification for email logins
     return db.verify_token(token)
 
 
@@ -180,7 +190,8 @@ def google_login():
     """
     from google.oauth2 import id_token
     from google.auth.transport import requests as google_requests
-    import requests as http_requests
+    import jwt
+    import datetime
 
     data      = request.get_json()
     token     = data.get("credential")
@@ -203,36 +214,17 @@ def google_login():
         user_data, is_new = result
         user_id, retrieved_name, dob, coins = user_data
 
-        # 3. Generate a Supabase magic-link (gives us a hashed_token)
-        supabase_url      = os.getenv("SUPABASE_URL")
-        supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
-
-        gen_res = db.supabase.auth.admin.generate_link({
-            "type": "magiclink",
-            "email": email,
-        })
-        hashed_token = gen_res.properties.hashed_token
-
-        # 4. Exchange hashed_token → real Supabase JWT session
-        verify_resp = http_requests.post(
-            f"{supabase_url}/auth/v1/verify",
-            json={"type": "magiclink", "token_hash": hashed_token},
-            headers={
-                "apikey": supabase_anon_key,
-                "Content-Type": "application/json"
-            },
-            timeout=10
+        # 3. Generate Custom JWT for Google User
+        secret = os.getenv("JWT_SECRET", "luna-secret-key-123")
+        access_token = jwt.encode(
+            {
+                "user_id": user_id, 
+                "email": email,
+                "exp": datetime.datetime.utcnow() + datetime.timedelta(days=30)
+            }, 
+            secret, 
+            algorithm="HS256"
         )
-
-        if verify_resp.status_code != 200:
-            print(f"Supabase verify error: {verify_resp.text}")
-            return jsonify({"error": "Could not create session for Google user"}), 500
-
-        session = verify_resp.json()
-        access_token = session.get("access_token")
-
-        if not access_token:
-            return jsonify({"error": "No access token returned from Supabase"}), 500
 
         return jsonify({
             "access_token": access_token,

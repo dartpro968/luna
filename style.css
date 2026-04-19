@@ -3,20 +3,20 @@
    ============================================ */
 
 :root {
-    --bg-primary:       #05020B;
-    --bg-secondary:     rgba(14, 9, 28, 0.75);
-    --bg-input:         #120A27;
-    --bg-bot:           linear-gradient(135deg, #2D1460 0%, #150A36 100%);
-    --bg-user:          linear-gradient(135deg, #B52B9E 0%, #7618BC 100%);
-    --text-primary:     #f5eeff;
-    --text-secondary:   #cba8ff;
-    --text-muted:       #856aab;
-    --accent:           #E338A9;
-    --border:           rgba(181, 43, 158, 0.22);
-    --radius-lg:        22px;
-    --radius-md:        16px;
-    --shadow-lg:        0 25px 80px rgba(0,0,0,0.9);
-    --ease:             cubic-bezier(0.16, 1, 0.3, 1);
+    --bg-primary:       #3a1f2b; /* Dark Burgundy */
+    --bg-secondary:     rgba(58, 31, 43, 0.6);
+    --bg-input:         rgba(178, 58, 84, 0.25);
+    --bg-bot:           #b23a54; /* Dark ruby red */
+    --bg-user:          #e85d75; /* Watermelon pink */
+    --text-primary:     #fff1e8; /* Off-white peach */
+    --text-secondary:   #f7c6d0; /* Pastel pink */
+    --text-muted:       rgba(247, 198, 208, 0.6);
+    --accent:           #e85d75;
+    --border:           #b23a54;
+    --radius-lg:        20px;
+    --radius-md:        18px;
+    --shadow-lg:        0 4px 12px rgba(58, 31, 43, 0.5);
+    --ease:             cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 /* ── Reset ─────────────────────────────────── */
@@ -25,13 +25,29 @@ html, body { height: 100%; }
 
 body {
     font-family: 'Inter', sans-serif;
-    background: radial-gradient(circle at 50% 0%, #201347, var(--bg-primary) 80%);
     color: var(--text-primary);
     display: flex;
     justify-content: center;
     align-items: stretch;           /* full-height stretch */
     overflow: hidden;
     -webkit-tap-highlight-color: transparent;
+    background-color: transparent; /* so video shows through */
+}
+
+/* ── Video Background ──────────────────────── */
+/* ── Video Background & Overlays ── */
+.bg-video { 
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    object-fit: cover;
+    z-index: -2;
+}
+.bg-overlay { 
+    background: rgba(0, 0, 0, 0.4); /* Slight tint for video legibility */
+    position: fixed; 
+    inset: 0; 
+    z-index: -1; 
 }
 
 /* ── Floating Hearts ─────────────────────── */
@@ -45,16 +61,14 @@ body {
     position: relative;
     z-index: 1;
     width: 100%;
-    max-width: 560px;
+    max-width: 600px; /* FB Messenger web is a bit wider */
     height: 100vh;
-    height: 100dvh;                 /* dynamic viewport (iOS Safari) */
+    height: 100dvh;
     display: flex;
     flex-direction: column;
-    background: var(--bg-secondary);
-    backdrop-filter: blur(40px);
-    -webkit-backdrop-filter: blur(40px);
-    border-left:  1px solid rgba(255,255,255,0.05);
-    border-right: 1px solid rgba(255,255,255,0.05);
+    background: var(--bg-primary); /* Solid black */
+    border-left:  1px solid var(--border);
+    border-right: 1px solid var(--border);
     overflow: hidden;
 }
 
@@ -62,20 +76,16 @@ body {
    HEADER  — strict two-column flex, no wrap
    ═══════════════════════════════════════════ */
 .chat-header {
-    /* Two zones: [profile] [actions] */
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 10px 14px;
-    /* respect top notch on iOS */
     padding-top: max(10px, env(safe-area-inset-top));
-    background: rgba(10, 5, 22, 0.92);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
+    background: var(--bg-primary); /* Solid color matching theme */
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
     z-index: 10;
-    min-height: 60px;
+    min-height: 64px;
 }
 
 /* LEFT: avatar + name  — takes leftover space, may truncate */
@@ -271,23 +281,23 @@ body {
 .message-row.user .msg-avatar { background: linear-gradient(135deg, #4facfe, #00f2fe); }
 
 .msg-bubble {
-    padding: 11px 15px;
+    padding: 10px 14px;
     border-radius: var(--radius-md);
-    font-size: 0.92rem; line-height: 1.55;
+    font-size: 0.95rem; line-height: 1.4;
     max-width: 100%;
     word-break: break-word;
 }
-.msg-bubble p { margin-bottom: 7px; }
+.msg-bubble p { margin-bottom: 5px; }
 .msg-bubble p:last-child { margin-bottom: 0; }
 .msg-bubble strong { color: #fff; }
 
-.message-row.bot  .msg-bubble { background: var(--bg-bot);  border: 1px solid rgba(255,255,255,0.06); border-top-left-radius:  4px; }
-.message-row.user .msg-bubble { background: var(--bg-user); border: 1px solid rgba(255,255,255,0.1);  border-top-right-radius: 4px; box-shadow: 0 6px 20px rgba(181,43,158,0.3); }
+.message-row.bot  .msg-bubble { background: var(--bg-bot);  color: var(--text-primary); border: none; }
+.message-row.user .msg-bubble { background: var(--bg-user); color: #fff; border: none; }
 
 .message-row.bot.chained-bottom  .msg-bubble { border-bottom-left-radius:  4px; }
-.message-row.bot.chained-top     .msg-bubble { border-top-left-radius:     var(--radius-md); }
+.message-row.bot.chained-top     .msg-bubble { border-top-left-radius:     4px; }
 .message-row.user.chained-bottom .msg-bubble { border-bottom-right-radius: 4px; }
-.message-row.user.chained-top    .msg-bubble { border-top-right-radius:    var(--radius-md); }
+.message-row.user.chained-top    .msg-bubble { border-top-right-radius:    4px; }
 
 .msg-meta {
     font-size: 0.67rem; color: var(--text-muted);
@@ -310,10 +320,9 @@ body {
    ═══════════════════════════════════════════ */
 .chat-input-area {
     flex-shrink: 0;
-    padding: 10px 14px;
-    padding-bottom: max(10px, env(safe-area-inset-bottom));
-    background: rgba(12,7,26,0.95);
-    backdrop-filter: blur(20px);
+    padding: 12px 14px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    background: var(--bg-primary);
     border-top: 1px solid var(--border);
 }
 
@@ -322,35 +331,31 @@ body {
     align-items: flex-end;
     gap: 10px;
     background: var(--bg-input);
-    border: 1px solid rgba(255,255,255,0.1);
     border-radius: var(--radius-lg);
-    padding: 7px 7px 7px 16px;
-    transition: border-color 0.3s, box-shadow 0.3s;
+    padding: 6px 6px 6px 16px;
 }
 .input-wrapper:focus-within {
-    border-color: var(--accent);
-    box-shadow: 0 0 20px rgba(227,56,169,0.2);
+    background: #4e4f50;
 }
 
 #userInput {
     flex: 1; background: none; border: none; outline: none;
-    color: #fff; font-size: 0.93rem;
+    color: #fff; font-size: 0.95rem;
     resize: none; max-height: 110px;
-    padding: 9px 0; line-height: 1.5;
-    font-family: 'Inter', sans-serif;
+    padding: 10px 0; line-height: 1.4;
+    font-family: inherit;
 }
 #userInput::placeholder { color: var(--text-muted); }
 
 .send-btn {
-    width: 40px; height: 40px; flex-shrink: 0; border: none;
-    background: linear-gradient(135deg, #e338a9, #7618bc);
-    border-radius: 14px; color: #fff; cursor: pointer;
+    width: 36px; height: 36px; flex-shrink: 0; border: none;
+    background: transparent;
+    border-radius: 50%; color: var(--accent); cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 18px rgba(227,56,169,0.4);
-    transition: transform 0.2s var(--ease), box-shadow 0.2s;
+    transition: background 0.2s;
 }
-.send-btn:hover  { transform: scale(1.08); box-shadow: 0 6px 26px rgba(227,56,169,0.6); }
-.send-btn:active { transform: scale(0.94); }
+.send-btn:hover  { background: rgba(0, 132, 255, 0.1); }
+.send-btn:active { background: rgba(0, 132, 255, 0.2); }
 
 .input-hint { text-align: center; font-size: 0.67rem; color: var(--text-muted); margin-top: 7px; }
 .input-hint kbd { background: rgba(255,255,255,0.08); padding: 2px 5px; border-radius: 4px; }
@@ -383,8 +388,7 @@ body {
    ═══════════════════════════════════════════ */
 .auth-overlay {
     position: fixed; inset: 0;
-    background: rgba(0,0,0,0.88);
-    backdrop-filter: blur(12px);
+    background: rgba(5, 2, 11, 0.35); /* Reduced from 0.8 to make video very visible */
     display: flex; align-items: center; justify-content: center;
     z-index: 1000;
     padding: 16px;
@@ -392,12 +396,14 @@ body {
 }
 
 .auth-box {
-    background: linear-gradient(180deg,rgba(22,14,45,.98) 0%,rgba(10,6,22,.98) 100%);
-    border: 1px solid var(--border);
-    border-radius: 22px;
-    padding: 28px 22px;
+    background: rgba(18, 10, 38, 0.7); /* Reduced from 0.95 */
+    backdrop-filter: blur(10px); /* Add a light glass blur to keep text readable */
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 32px 28px;
     width: 100%; max-width: 380px;
-    box-shadow: 0 20px 60px rgba(0,0,0,.6);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255, 255, 255, 0.2);
     text-align: center;
 }
 
@@ -413,17 +419,35 @@ body {
 }
 .auth-tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
 
-.auth-form { display: flex; flex-direction: column; gap: 12px; }
+.auth-form { display: flex; flex-direction: column; gap: 14px; }
 .auth-form input {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid var(--border);
-    padding: 11px 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+    padding: 12px 14px;
     border-radius: 12px; color: var(--text-primary);
     font-family: inherit; font-size: 0.95rem;
-    outline: none; transition: border-color 0.25s;
+    outline: none; transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
     width: 100%;
 }
-.auth-form input:focus { border-color: var(--accent); }
+.auth-form input:focus { 
+    border-color: var(--accent); 
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 15px rgba(227, 56, 169, 0.2), inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.password-wrapper { position: relative; width: 100%; display: flex; align-items: center; }
+.password-wrapper input { padding-right: 40px; }
+.toggle-password {
+    position: absolute; right: 12px;
+    background: transparent; border: none;
+    color: var(--text-muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding: 4px;
+    transition: color 0.2s;
+}
+.toggle-password:hover { color: var(--accent); }
 
 .auth-submit {
     background: linear-gradient(135deg, var(--accent), #7618bc);

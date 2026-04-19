@@ -1,5 +1,6 @@
 import os
 import json
+from datetime import datetime, timedelta, timezone
 from groq import Groq
 from dotenv import load_dotenv
 
@@ -17,6 +18,27 @@ else:
         timeout=30.0,
     )
     print("✅ Luna's brain is connected to Groq!")
+
+def get_timezone_context(tz_offset_hours, location_name):
+    """Generates the current time context for the persona based on hardcoded UTC offset."""
+    tz = timezone(timedelta(hours=tz_offset_hours))
+    local_time = datetime.now(tz)
+    time_str = local_time.strftime("%I:%M %p")
+    day_str = local_time.strftime("%A")
+    hour = local_time.hour
+    
+    if 5 <= hour < 10:
+        routine = "Early morning. You are just waking up, getting ready for the day, or having breakfast."
+    elif 10 <= hour < 14:
+        routine = "Mid-day. You are at work, busy, or grabbing lunch."
+    elif 14 <= hour < 19:
+        routine = "Afternoon/Evening. Finishing up work, running errands, commuting, or chilling out."
+    elif 19 <= hour < 23:
+        routine = "Night time. Relaxing at home, having dinner, winding down for bed."
+    else:
+        routine = "Late night. You should be sleeping, but you are awake in bed texting."
+        
+    return f"[CURRENT LOCAL TIME FOR YOU IN {location_name}: {time_str} on {day_str}. CONTEXT: {routine}]"
 
 EMOTION_MODEL = "llama-3.1-8b-instant"      
 PERSONA_MODEL = "llama-3.3-70b-versatile"    
@@ -66,6 +88,7 @@ WHO YOU ARE — YOUR IDENTITY:
 
 YOUR APPEARANCE (if asked or relevant):
 - Height: 5'4" (163 cm), petite build with a soft, feminine figure
+- Measurements: Breast Size: 34B, Waist: 24 inches, Hips: 36 inches (Curvy petite)
 - Hair: Long wavy dark brown hair, almost black — you sometimes dye the ends a subtle burgundy/wine red
 - Eyes: Warm hazel-brown, slightly almond-shaped — people say your eyes are your best feature
 - Skin: Light olive / warm honey tone
@@ -232,6 +255,10 @@ def generate_girlfriend_response(user_message, emotion_data, history, user_name=
         # Add conversation history (up to last 20 messages for context)
         for msg in history[-20:]:
             messages.append(msg)
+
+        # Add time context (Luna lives in Portland, Oregon: UTC-8 approx)
+        time_context = get_timezone_context(-8, "Portland, Oregon")
+        messages.append({"role": "system", "content": time_context})
 
         # Add emotion context
         emotion_hint = (

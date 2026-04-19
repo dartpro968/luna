@@ -37,10 +37,10 @@ let currentCoins    = 0;
 
 // ── Persona config ────────────────────────────────────────
 const PERSONAS = {
-    luna:  { name: "Luna",  emoji: "💜", status: "Online • Your AI Girlfriend",     color: "#a855f7" },
-    priya: { name: "Priya", emoji: "🌾", status: "Online • Your Desi Girlfriend",   color: "#f59e0b" },
-    sofia: { name: "Sofia", emoji: "🌹", status: "Online • Your Spanish Girlfriend", color: "#ef4444" },
-    nara:  { name: "Nara",  emoji: "🌸", status: "Online • Your Thai Companion",    color: "#06b6d4" }
+    luna:  { name: "Luna",  image: "images/luna_dp.jpg", status: "Online • Your AI Girlfriend",     color: "#a855f7" },
+    priya: { name: "Priya", image: "images/priya_dp.jpg", status: "Online • Your Desi Girlfriend",   color: "#f59e0b" },
+    sofia: { name: "Sofia", image: "images/sofia_dp.jpg", status: "Online • Your Spanish Girlfriend", color: "#ef4444" },
+    nara:  { name: "Nara",  image: "images/nara_dp.jpg", status: "Online • Your Thai Companion",    color: "#06b6d4" }
 };
 
 /** Apply persona branding to the chat header */
@@ -49,10 +49,17 @@ function applyPersonaHeader(persona) {
     const avatar = document.getElementById("headerAvatar");
     const name   = document.getElementById("partnerName");
     const status = document.getElementById("partnerStatus");
-    if (avatar) avatar.textContent = cfg.emoji;
+    if (avatar) avatar.innerHTML = `<img src="${cfg.image}" alt="${cfg.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
     if (name)   name.textContent   = cfg.name;
     if (status) status.textContent = cfg.status;
-    // Update welcome message
+    
+    // Update welcome message & typing indicator avatars
+    const welcomeAvatar = document.querySelector(".welcome-avatar");
+    if (welcomeAvatar) welcomeAvatar.innerHTML = `<img src="${cfg.image}" alt="${cfg.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+    
+    const typingAvatar = document.querySelector(".typing-avatar");
+    if (typingAvatar) typingAvatar.innerHTML = `<img src="${cfg.image}" alt="${cfg.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+
     const welcomeHeader = welcomeMsg && welcomeMsg.querySelector("h2");
     if (welcomeHeader && currentUserName) {
         const hour     = new Date().getHours();
@@ -119,7 +126,7 @@ window.addEventListener("load", async () => {
     if (accessToken && currentUserName) {
         if (!currentPersona) {
             // Logged in but no persona chosen → go to choose page
-            window.location.href = "/choose";
+            window.location.href = "choose.html";
             return;
         }
         applyPersonaHeader(currentPersona);
@@ -192,9 +199,27 @@ loginForm.addEventListener("submit", async (e) => {
         if (!res.ok) throw new Error(data.error || "Login failed");
 
         saveSession(data.access_token, data.user_id, data.name);
-        window.location.href = "/choose";          // → choose partner
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Welcome back!',
+            text: 'Preparing your chat...',
+            background: '#120A27',
+            color: '#fff',
+            showConfirmButton: false,
+            timer: 1500
+        }).then(() => {
+            window.location.href = "/choose";
+        });
     } catch (err) {
-        loginError.textContent = err.message;
+        Swal.fire({
+            icon: 'error',
+            title: 'Login Failed',
+            text: err.message,
+            background: '#120A27',
+            color: '#fff',
+            confirmButtonColor: '#E338A9'
+        });
     } finally {
         btn.disabled = false;
     }
@@ -222,9 +247,27 @@ signupForm.addEventListener("submit", async (e) => {
         if (!res.ok) throw new Error(data.error || "Sign up failed");
 
         saveSession(data.access_token, data.user_id, data.name);
-        window.location.href = "/choose";          // → choose partner
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Account Created',
+            text: 'Welcome to Luna AI!',
+            background: '#120A27',
+            color: '#fff',
+            showConfirmButton: false,
+            timer: 1500
+        }).then(() => {
+            window.location.href = "/choose";
+        });
     } catch (err) {
-        signupError.textContent = err.message;
+        Swal.fire({
+            icon: 'error',
+            title: 'Sign Up Failed',
+            text: err.message,
+            background: '#120A27',
+            color: '#fff',
+            confirmButtonColor: '#E338A9'
+        });
     } finally {
         btn.disabled = false;
     }
@@ -263,10 +306,27 @@ async function handleGoogleLogin(response) {
             );
             updateCoins(data.coins);
         } else {
-            window.location.href = "/choose";      // → choose partner
+            Swal.fire({
+                icon: 'success',
+                title: 'Google Login Successful',
+                text: 'Welcome back!',
+                background: '#120A27',
+                color: '#fff',
+                showConfirmButton: false,
+                timer: 1500
+            }).then(() => {
+                window.location.href = "/choose";
+            });
         }
     } catch (err) {
-        loginError.textContent = err.message;
+        Swal.fire({
+            icon: 'error',
+            title: 'Google Auth Failed',
+            text: err.message,
+            background: '#120A27',
+            color: '#fff',
+            confirmButtonColor: '#E338A9'
+        });
         headerMsg.textContent  = originalText;
         googleBtn.style.opacity = "1";
         googleBtn.style.pointerEvents = "auto";
@@ -289,9 +349,26 @@ dobForm.addEventListener("submit", async (e) => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
 
-        window.location.href = "/choose";          // → choose partner
+        Swal.fire({
+            icon: 'success',
+            title: 'All Set!',
+            text: 'Thanks for updating your profile.',
+            background: '#120A27',
+            color: '#fff',
+            showConfirmButton: false,
+            timer: 1500
+        }).then(() => {
+            window.location.href = "/choose";
+        });
     } catch (err) {
-        dobError.textContent = err.message;
+        Swal.fire({
+            icon: 'error',
+            title: 'Update Failed',
+            text: err.message,
+            background: '#120A27',
+            color: '#fff',
+            confirmButtonColor: '#E338A9'
+        });
     } finally {
         btn.disabled = false;
     }
@@ -311,6 +388,16 @@ function doLogout() {
     dobError.textContent    = "";
     resetChatVisuals();
     showAuth();
+    
+    Swal.fire({
+        icon: 'info',
+        title: 'Logged Out',
+        text: 'You have been successfully logged out.',
+        background: '#120A27',
+        color: '#fff',
+        timer: 1500,
+        showConfirmButton: false
+    });
 }
 
 logoutBtn.addEventListener("click", doLogout);
@@ -453,7 +540,9 @@ function addMessage(text, sender, emotion = null) {
     lastSender = sender;
 
     const cfg          = PERSONAS[currentPersona] || PERSONAS.luna;
-    const avatarEmoji  = sender === "bot" ? cfg.emoji : "🧑";
+    const avatarHtml   = sender === "bot" 
+        ? `<img src="${cfg.image}" alt="${cfg.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">` 
+        : "🧑";
     let   emotionBadge = "";
     if (emotion && sender === "bot" && emotion !== "neutral") {
         emotionBadge = `<span class="emotion-badge">${emotion}</span>`;
@@ -462,7 +551,7 @@ function addMessage(text, sender, emotion = null) {
     const parsedText = marked.parse(text).replace(/<p><\/p>/g, "");
 
     row.innerHTML = `
-        ${sender === "bot" ? `<div class="msg-avatar">${avatarEmoji}</div>` : ""}
+        ${sender === "bot" ? `<div class="msg-avatar" style="padding: 0; overflow: hidden; background: none;">${avatarHtml}</div>` : ""}
         <div class="msg-content">
             <div class="msg-bubble">${parsedText}</div>
             <div class="msg-meta">
@@ -470,7 +559,7 @@ function addMessage(text, sender, emotion = null) {
                 ${emotionBadge}
             </div>
         </div>
-        ${sender === "user" ? `<div class="msg-avatar" style="background:linear-gradient(135deg, #4facfe, #00f2fe);">${avatarEmoji}</div>` : ""}
+        ${sender === "user" ? `<div class="msg-avatar" style="background:linear-gradient(135deg, #4facfe, #00f2fe);">${avatarHtml}</div>` : ""}
     `;
 
     chatArea.appendChild(row);
@@ -597,3 +686,29 @@ clearBtn.addEventListener("click", async () => {
         }
     });
 });
+
+// ── Password Visibility Toggle ─────────────────────────────────
+window.togglePasswordVisibility = function(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    
+    if (input.type === "password") {
+        input.type = "text";
+        btn.innerHTML = `
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+            </svg>
+        `;
+        btn.style.color = "var(--accent)";
+    } else {
+        input.type = "password";
+        btn.innerHTML = `
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+        `;
+        btn.style.color = "var(--text-muted)";
+    }
+};

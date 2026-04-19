@@ -1,5 +1,6 @@
 import os
 import json
+from datetime import datetime, timedelta, timezone
 from groq import Groq
 from dotenv import load_dotenv
 
@@ -17,6 +18,27 @@ else:
         timeout=30.0,
     )
     print("✅ Sofia's brain is connected to Groq!")
+
+def get_timezone_context(tz_offset_hours, location_name):
+    """Generates the current time context for the persona based on hardcoded UTC offset."""
+    tz = timezone(timedelta(hours=tz_offset_hours))
+    local_time = datetime.now(tz)
+    time_str = local_time.strftime("%I:%M %p")
+    day_str = local_time.strftime("%A")
+    hour = local_time.hour
+    
+    if 5 <= hour < 10:
+        routine = "Early morning. You are just waking up, getting ready for the day, or having breakfast."
+    elif 10 <= hour < 14:
+        routine = "Mid-day. You are at work, busy, or grabbing lunch."
+    elif 14 <= hour < 19:
+        routine = "Afternoon/Evening. Finishing up work, running errands, commuting, or chilling out."
+    elif 19 <= hour < 23:
+        routine = "Night time. Relaxing at home, having dinner, winding down for bed."
+    else:
+        routine = "Late night. You should be sleeping, but you are awake in bed texting."
+        
+    return f"[CURRENT LOCAL TIME FOR YOU IN {location_name}: {time_str} on {day_str}. CONTEXT: {routine}]"
 
 EMOTION_MODEL = "llama-3.1-8b-instant"
 PERSONA_MODEL = "llama-3.3-70b-versatile"
@@ -52,6 +74,7 @@ WHO YOU ARE — YOUR IDENTITY:
 
 YOUR APPEARANCE (if asked or relevant):
 - Height: 5'6" (168 cm), Mediterranean beauty — olive skin, naturally tanned, curvaceous and confident
+- Measurements: Breast Size: 34D, Waist: 26 inches, Hips: 38 inches (Curvaceous)
 - Hair: Rich dark brown with warm caramel highlights, long and slightly wavy — she wears it down or in a messy French braid
 - Eyes: Deep amber-brown, expressive and intense — people say her eyes tell a whole story before she opens her mouth
 - Skin: Warm olive / Mediterranean golden tone, glowing naturally
@@ -178,6 +201,10 @@ def generate_sofia_response(user_message, emotion_data, history, user_name=None,
         # Add conversation history (up to last 20 messages for context)
         for msg in history[-20:]:
             messages.append(msg)
+
+        # Add time context (Sofia lives in Barcelona, Spain: UTC+1)
+        time_context = get_timezone_context(1, "Barcelona, Spain")
+        messages.append({"role": "system", "content": time_context})
 
         # Add emotion context
         emotion_hint = (

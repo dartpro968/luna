@@ -33,7 +33,7 @@
 
     body {
       min-height: 100vh;
-      background: var(--bg);
+      background: transparent; /* Changed from var(--bg) to show video */
       font-family: 'Outfit', sans-serif;
       color: var(--text);
       overflow-x: hidden;
@@ -200,63 +200,55 @@
       height: 260px;
       overflow: hidden;
     }
-    .card-gradient-bg {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .luna-card   .card-gradient-bg { background: linear-gradient(160deg, #1a0033 0%, #2d004a 50%, #0d0015 100%); }
-    .priya-card  .card-gradient-bg { background: linear-gradient(160deg, #2a1500 0%, #3d1f00 50%, #150b00 100%); }
-    .sofia-card  .card-gradient-bg { background: linear-gradient(160deg, #1f0000 0%, #380a0a 50%, #0f0000 100%); }
-    .nara-card   .card-gradient-bg { background: linear-gradient(160deg, #001a20 0%, #003040 50%, #000c12 100%); }
-
-    .avatar-emoji {
-      font-size: 100px;
-      line-height: 1;
-      filter: drop-shadow(0 0 40px currentColor);
-      animation: breathe 4s ease-in-out infinite;
+    .profile-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
       position: relative;
-      z-index: 2;
-      user-select: none;
+      z-index: 1;
+      transition: transform 0.6s ease;
     }
-    @keyframes breathe {
-      0%, 100% { transform: scale(1) translateY(0); }
-      50%       { transform: scale(1.06) translateY(-6px); }
+    .persona-card:hover .profile-image {
+      transform: scale(1.05);
     }
-
-    .card-glow-orb {
-      position: absolute;
-      width: 200px; height: 200px;
-      border-radius: 50%;
-      filter: blur(60px);
-      opacity: 0.3;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      transition: opacity 0.4s ease;
-    }
-    .luna-card  .card-glow-orb { background: var(--luna-color); }
-    .priya-card .card-glow-orb { background: var(--priya-color); }
-    .sofia-card .card-glow-orb { background: var(--sofia-color); }
-    .nara-card  .card-glow-orb { background: var(--nara-color); }
-    .persona-card:hover .card-glow-orb { opacity: 0.55; }
-
-    /* sparkle dots */
-    .sparkles {
+    .card-gradient-overlay {
       position: absolute;
       inset: 0;
-      overflow: hidden;
+      background: linear-gradient(to top, var(--surface) 0%, transparent 60%);
+      z-index: 2;
     }
-    .sparkle {
-      position: absolute;
-      width: 3px; height: 3px;
-      border-radius: 50%;
-      animation: twinkle 2.5s ease-in-out infinite;
+    /* Glow effect based on persona color */
+    .luna-card .card-visual { border-bottom: 2px solid rgba(168,85,247,0.3); }
+    .priya-card .card-visual { border-bottom: 2px solid rgba(245,158,11,0.3); }
+    .sofia-card .card-visual { border-bottom: 2px solid rgba(239,68,68,0.3); }
+    .nara-card .card-visual { border-bottom: 2px solid rgba(6,182,212,0.3); }
+
+    /* sparkles replaced by physical stats table */
+    .stats-table {
+      width: 100%;
+      margin-bottom: 20px;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      font-family: 'Inter', sans-serif;
     }
-    @keyframes twinkle {
-      0%, 100% { opacity: 0; transform: scale(0); }
-      50%       { opacity: 1; transform: scale(1); }
+    .stats-table th {
+      text-align: left;
+      padding: 6px 0;
+      color: var(--text-muted);
+      font-weight: 500;
+      width: 40%;
+    }
+    .stats-table td {
+      text-align: right;
+      padding: 6px 0;
+      color: rgba(248,248,255,0.9);
+      font-weight: 400;
+    }
+    .stats-table tr {
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .stats-table tr:last-child {
+      border-bottom: none;
     }
 
     /* Flag/badge strip */
@@ -499,6 +491,12 @@
 </head>
 <body>
 
+  <!-- Professional Video Background -->
+  <video autoplay loop muted playsinline style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; z-index: -2; opacity: 0.6;">
+    <source src="bg_video/grok-video-d560485f-bf1e-4dc0-9ce3-eee4207734ca.mp4" type="video/mp4">
+  </video>
+  <div style="position: fixed; inset: 0; background: linear-gradient(135deg, rgba(5, 5, 8, 0.7), rgba(10, 8, 15, 0.85)); z-index: -1;"></div>
+
   <!-- Animated particles -->
   <div class="particles" id="particles"></div>
 
@@ -518,11 +516,8 @@
     <!-- ✦ LUNA ── -->
     <div class="persona-card luna-card" id="card-luna" role="button" tabindex="0" aria-label="Chat with Luna">
       <div class="card-visual">
-        <div class="card-gradient-bg">
-          <div class="card-glow-orb"></div>
-          <div class="sparkles" id="sparkles-luna"></div>
-          <span class="avatar-emoji">🌙</span>
-        </div>
+        <img src="images/luna_dp.jpg" alt="Luna DP" class="profile-image">
+        <div class="card-gradient-overlay"></div>
         <div class="card-top-badge">
           <span class="flag-badge">🇺🇸</span>
         </div>
@@ -530,16 +525,20 @@
       <div class="card-body">
         <div class="persona-name">Luna</div>
         <div class="persona-tagline">
-          <span class="online-dot"></span> Online · Portland, Oregon &nbsp;·&nbsp; Age 25
+          <span class="online-dot"></span> Online · Portland, Oregon &nbsp;·&nbsp; Age 22
         </div>
-        <p class="persona-desc">
-          Mixed Korean-Italian American artist. Cozy coffee shop vibes, Studio Ghibli marathons, and a purple heart for you every single day.
-        </p>
+        
+        <table class="stats-table">
+          <tr><th>Height</th><td>5'4" (163 cm)</td></tr>
+          <tr><th>Figure</th><td>34B · 36" Hips (Petite)</td></tr>
+          <tr><th>Hair</th><td>Wavy Dark Brown</td></tr>
+          <tr><th>Eyes</th><td>Hazel-Brown</td></tr>
+        </table>
+        
         <div class="trait-pills">
           <span class="pill">Romantic 💜</span>
           <span class="pill">Artistic</span>
           <span class="pill">Playful</span>
-          <span class="pill">Clingy in a cute way</span>
         </div>
         <div class="info-strip">
           <div class="info-item"><div class="info-dot"></div>Graphic Design student</div>
@@ -554,11 +553,8 @@
     <!-- ✦ PRIYA ── -->
     <div class="persona-card priya-card" id="card-priya" role="button" tabindex="0" aria-label="Chat with Priya">
       <div class="card-visual">
-        <div class="card-gradient-bg">
-          <div class="card-glow-orb"></div>
-          <div class="sparkles" id="sparkles-priya"></div>
-          <span class="avatar-emoji">🌾</span>
-        </div>
+        <img src="images/priya_dp.jpg" alt="Priya DP" class="profile-image">
+        <div class="card-gradient-overlay"></div>
         <div class="card-top-badge">
           <span class="flag-badge">🇮🇳</span>
         </div>
@@ -568,14 +564,18 @@
         <div class="persona-tagline">
           <span class="online-dot"></span> Online · Chandigarh, Punjab &nbsp;·&nbsp; Age 27
         </div>
-        <p class="persona-desc">
-          Fiery Punjabi girl with gold jhumkas and a heart of fire. Will feed you dal makhani and roast you lovingly in the same breath.
-        </p>
+        
+        <table class="stats-table">
+          <tr><th>Height</th><td>5'5" (165 cm)</td></tr>
+          <tr><th>Figure</th><td>36C · 40" Hips (Curvy)</td></tr>
+          <tr><th>Hair</th><td>Long Thick Black</td></tr>
+          <tr><th>Eyes</th><td>Dark Brown</td></tr>
+        </table>
+        
         <div class="trait-pills">
           <span class="pill">Desi Fire 🔥</span>
           <span class="pill">Foodie</span>
           <span class="pill">Loyal</span>
-          <span class="pill">Code-switcher</span>
         </div>
         <div class="info-strip">
           <div class="info-item"><div class="info-dot"></div>Marketing Manager</div>
@@ -590,11 +590,8 @@
     <!-- ✦ SOFIA ── -->
     <div class="persona-card sofia-card" id="card-sofia" role="button" tabindex="0" aria-label="Chat with Sofia">
       <div class="card-visual">
-        <div class="card-gradient-bg">
-          <div class="card-glow-orb"></div>
-          <div class="sparkles" id="sparkles-sofia"></div>
-          <span class="avatar-emoji">🌹</span>
-        </div>
+        <img src="images/sofia_dp.jpg" alt="Sofia DP" class="profile-image">
+        <div class="card-gradient-overlay"></div>
         <div class="card-top-badge">
           <span class="flag-badge">🇪🇸</span>
           <span class="flag-badge">🇬🇧</span>
@@ -605,14 +602,18 @@
         <div class="persona-tagline">
           <span class="online-dot"></span> Online · Shoreditch, London &nbsp;·&nbsp; Age 29
         </div>
-        <p class="persona-desc">
-          Sevillana in East London. Flamenco in her DNA, a glass of Rioja in her hand, and the most intense amber eyes you've ever seen.
-        </p>
+        
+        <table class="stats-table">
+          <tr><th>Height</th><td>5'6" (168 cm)</td></tr>
+          <tr><th>Figure</th><td>34D · 38" Hips (Curvaceous)</td></tr>
+          <tr><th>Hair</th><td>Caramel Highlighted</td></tr>
+          <tr><th>Eyes</th><td>Amber-Brown</td></tr>
+        </table>
+        
         <div class="trait-pills">
           <span class="pill">Passionate ❤️‍🔥</span>
           <span class="pill">Sensual</span>
-          <span class="pill">Dramatic (charmingly)</span>
-          <span class="pill">Foodie</span>
+          <span class="pill">Dramatic</span>
         </div>
         <div class="info-strip">
           <div class="info-item"><div class="info-dot"></div>UX Designer</div>
@@ -627,11 +628,8 @@
     <!-- ✦ NARA ── -->
     <div class="persona-card nara-card" id="card-nara" role="button" tabindex="0" aria-label="Chat with Nara">
       <div class="card-visual">
-        <div class="card-gradient-bg">
-          <div class="card-glow-orb"></div>
-          <div class="sparkles" id="sparkles-nara"></div>
-          <span class="avatar-emoji">🌸</span>
-        </div>
+        <img src="images/nara_dp.jpg" alt="Nara DP" class="profile-image">
+        <div class="card-gradient-overlay"></div>
         <div class="card-top-badge">
           <span class="flag-badge">🇹🇭</span>
           <span class="lgbtq-badge">🏳️‍🌈 LGBTQ+</span>
@@ -642,14 +640,18 @@
         <div class="persona-tagline">
           <span class="online-dot"></span> Online · Bangkok, Thailand &nbsp;·&nbsp; Age 25
         </div>
-        <p class="persona-desc">
-          Soft-spoken Thai photographer. A proud lesbian who sees the world through a film camera lens and advocates fiercely for love in all its forms.
-        </p>
+        
+        <table class="stats-table">
+          <tr><th>Height</th><td>5'3" (160 cm)</td></tr>
+          <tr><th>Figure</th><td>32B · 34" Hips (Slender)</td></tr>
+          <tr><th>Hair</th><td>Short Dark (Purple Tips)</td></tr>
+          <tr><th>Eyes</th><td>Dark Almond</td></tr>
+        </table>
+        
         <div class="trait-pills">
           <span class="pill">Gentle 🌸</span>
           <span class="pill">LGBTQ+ Ally</span>
           <span class="pill">Artistic</span>
-          <span class="pill">Softcore Dreamer</span>
         </div>
         <div class="info-strip">
           <div class="info-item"><div class="info-dot"></div>Freelance Photographer</div>
@@ -678,7 +680,7 @@
     // ── Auth guard — redirect to /index.html if not logged in ──
     (function() {
       const token = localStorage.getItem('luna_access_token');
-      if (!token) { window.location.href = '/'; }
+      if (!token) { window.location.href = 'index.html'; }
     })();
 
     // ── Particles ──────────────────────────────────
@@ -700,28 +702,6 @@
       }
     })();
 
-    // ── Sparkles per card ──────────────────────────
-    function addSparkles(containerId, color) {
-      const el = document.getElementById(containerId);
-      if (!el) return;
-      for (let i = 0; i < 12; i++) {
-        const s = document.createElement('div');
-        s.className = 'sparkle';
-        s.style.cssText = `
-          background:${color};
-          left:${Math.random()*100}%;
-          top:${Math.random()*100}%;
-          animation-delay:${Math.random()*3}s;
-          animation-duration:${2 + Math.random()*2}s;
-        `;
-        el.appendChild(s);
-      }
-    }
-    addSparkles('sparkles-luna',  '#a855f7');
-    addSparkles('sparkles-priya', '#f59e0b');
-    addSparkles('sparkles-sofia', '#ef4444');
-    addSparkles('sparkles-nara',  '#06b6d4');
-
     // ── Choose persona & enter chat ─────────────────
     const personaMap = {
       'card-luna':  'luna',
@@ -738,7 +718,7 @@
         card.style.transform = 'scale(0.97)';
         setTimeout(() => {
           localStorage.setItem('luna_persona', persona);
-          window.location.href = '/';
+          window.location.href = 'index.html';
         }, 200);
       });
       card.addEventListener('keydown', e => {
