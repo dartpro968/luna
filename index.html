@@ -11,6 +11,19 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    
+    <!-- PWA Manifest & App Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a0b14">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="images/luna_dp.png">
+    
+    <!-- Preload Avatar Assets -->
+    <link rel="preload" as="image" href="images/luna_dp.png">
+    <link rel="preload" as="image" href="images/priya_dp.png">
+    <link rel="preload" as="image" href="images/sofia_dp.png">
+    <link rel="preload" as="image" href="images/nara_dp.png">
 
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -166,7 +179,7 @@
         <main class="chat-area" id="chatArea">
             <!-- Welcome Message -->
             <div class="welcome-msg" id="welcomeMsg">
-                <div class="welcome-avatar" style="padding: 0; overflow: hidden; background: transparent;">💜</div>
+
                 <h2>Hey <span id="userNameDisplay">there</span>! 💕</h2>
                 <p>I'm <strong>Luna</strong>, your AI girlfriend. Say hi to get started!</p>
             </div>
@@ -210,31 +223,31 @@
             </div>
 
             <div class="coin-packages">
-                <div class="coin-package" onclick="buyCoins(10, 30)">
-                    <div class="package-badge bundle">Starter</div>
-                    <div class="package-content">
-                        <div class="package-coins"><img src="coin.png" class="inline-coin" alt="coin"> 10 Coins</div>
-                        <div class="package-desc">Perfect for a short chat</div>
-                    </div>
-                    <div class="package-price">₹30</div>
-                </div>
-
-                <div class="coin-package best-value" onclick="buyCoins(50, 150)">
-                    <div class="package-badge best">Most Popular</div>
-                    <div class="package-content">
-                        <div class="package-coins"><img src="coin.png" class="inline-coin" alt="coin"> 50 Coins</div>
-                        <div class="package-desc">Great for a deep conversation</div>
-                    </div>
-                    <div class="package-price">₹150</div>
-                </div>
-
-                <div class="coin-package ultimate" onclick="buyCoins(100, 300)">
-                    <div class="package-badge super">Ultimate Value</div>
+                <div class="coin-package" onclick="buyPackage('coins_100')">
+                    <div class="package-badge bundle">Refill</div>
                     <div class="package-content">
                         <div class="package-coins"><img src="coin.png" class="inline-coin" alt="coin"> 100 Coins</div>
+                        <div class="package-desc">Good for casual chatters</div>
+                    </div>
+                    <div class="package-price">₹59</div>
+                </div>
+
+                <div class="coin-package best-value" onclick="buyPackage('subscription')">
+                    <div class="package-badge best">The Luna Pass</div>
+                    <div class="package-content">
+                        <div class="package-coins"><img src="coin.png" class="inline-coin" alt="coin"> Unlimited Chat</div>
                         <div class="package-desc">Never run out of things to say</div>
                     </div>
-                    <div class="package-price">₹300</div>
+                    <div class="package-price">₹349 <span style="font-size: 0.6rem;">/ month</span></div>
+                </div>
+
+                <div class="coin-package ultimate" onclick="buyPackage('coins_500')">
+                    <div class="package-badge super">Mega Bundle</div>
+                    <div class="package-content">
+                        <div class="package-coins"><img src="coin.png" class="inline-coin" alt="coin"> 500 Coins</div>
+                        <div class="package-desc">For heavy sexting sessions</div>
+                    </div>
+                    <div class="package-price">₹199</div>
                 </div>
             </div>
 
@@ -284,7 +297,15 @@
             });
         })();
     </script>
+    <script>
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                  .then(reg => console.log('PWA Service Worker registered'))
+                  .catch(err => console.log('SW registration failed', err));
+            });
+        }
+    </script>
 </body>
-
-
 </html>

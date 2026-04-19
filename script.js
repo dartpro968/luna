@@ -37,10 +37,10 @@ let currentCoins    = 0;
 
 // ── Persona config ────────────────────────────────────────
 const PERSONAS = {
-    luna:  { name: "Luna",  image: "images/luna_dp.jpg", status: "Online • Your AI Girlfriend",     color: "#a855f7" },
-    priya: { name: "Priya", image: "images/priya_dp.jpg", status: "Online • Your Desi Girlfriend",   color: "#f59e0b" },
-    sofia: { name: "Sofia", image: "images/sofia_dp.jpg", status: "Online • Your Spanish Girlfriend", color: "#ef4444" },
-    nara:  { name: "Nara",  image: "images/nara_dp.jpg", status: "Online • Your Thai Companion",    color: "#06b6d4" }
+    luna:  { name: "Luna",  image: "images/luna_dp.png", status: "Online • Your AI Girlfriend",     color: "#a855f7" },
+    priya: { name: "Priya", image: "images/priya_dp.png", status: "Online • Your Desi Girlfriend",   color: "#f59e0b" },
+    sofia: { name: "Sofia", image: "images/sofia_dp.png", status: "Online • Your Spanish Girlfriend", color: "#ef4444" },
+    nara:  { name: "Nara",  image: "images/nara_dp.png", status: "Online • Your Thai Companion",    color: "#06b6d4" }
 };
 
 /** Apply persona branding to the chat header */
@@ -52,10 +52,6 @@ function applyPersonaHeader(persona) {
     if (avatar) avatar.innerHTML = `<img src="${cfg.image}" alt="${cfg.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
     if (name)   name.textContent   = cfg.name;
     if (status) status.textContent = cfg.status;
-    
-    // Update welcome message & typing indicator avatars
-    const welcomeAvatar = document.querySelector(".welcome-avatar");
-    if (welcomeAvatar) welcomeAvatar.innerHTML = `<img src="${cfg.image}" alt="${cfg.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
     
     const typingAvatar = document.querySelector(".typing-avatar");
     if (typingAvatar) typingAvatar.innerHTML = `<img src="${cfg.image}" alt="${cfg.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
@@ -421,7 +417,7 @@ function resetChatVisuals() {
 }
 
 // ── Coins / Payment ────────────────────────────────────────
-async function buyCoins(coins, amountInRupees) {
+async function buyPackage(package_type) {
     const statusMsg = document.getElementById("payment-status");
     statusMsg.style.color  = "var(--text-secondary)";
     statusMsg.textContent  = "Initiating secure payment...";
@@ -430,7 +426,7 @@ async function buyCoins(coins, amountInRupees) {
         const res = await fetch(`${API_BASE}/create-order`, {
             method: "POST",
             headers: authHeaders(),
-            body: JSON.stringify({ amount: amountInRupees, coins })
+            body: JSON.stringify({ package_type })
         });
         const orderData = await res.json();
         if (!res.ok) throw new Error(orderData.error);
@@ -439,8 +435,8 @@ async function buyCoins(coins, amountInRupees) {
             "key":      orderData.razorpay_key,
             "amount":   orderData.amount,
             "currency": orderData.currency,
-            "name":     "Luna Love Coins",
-            "description": `Purchase ${coins} Love Coins`,
+            "name":     "Luna AI",
+            "description": package_type === "subscription" ? "The Luna Pass (Monthly)" : "Premium Coins Bundle",
             "image":    "https://i.imgur.com/8QG9TfT.png",
             "order_id": orderData.order_id,
             "handler": async function (response) {
@@ -454,14 +450,15 @@ async function buyCoins(coins, amountInRupees) {
                             razorpay_payment_id: response.razorpay_payment_id,
                             razorpay_order_id:   response.razorpay_order_id,
                             razorpay_signature:  response.razorpay_signature,
-                            coins
+                            package_type
                         })
                     });
                     const verifyData = await verifyRes.json();
                     if (verifyRes.ok && verifyData.status === "success") {
                         statusMsg.style.color = "#4ade80";
-                        statusMsg.textContent = "Payment successful! Coins added. 💜";
-                        updateCoins(verifyData.new_balance);
+                        statusMsg.textContent = verifyData.message || "Payment successful! 💜";
+                        if (verifyData.new_balance) updateCoins(verifyData.new_balance);
+                        if (verifyData.tier === "premium") updateCoins("Unlimited");
                         setTimeout(() => {
                             document.getElementById("premium-overlay").style.display = "none";
                             statusMsg.textContent = "";
@@ -585,9 +582,10 @@ async function sendToAPI(message) {
         const data = await response.json();
         if (!response.ok) {
             if (response.status === 401) doLogout();
-            if (data.require_payment) {
+            // 402 = out of coins (free tier), 429 = daily soft cap (premium)
+            if (response.status === 402 || response.status === 429 || data.auth_action) {
                 premiumOverlay.style.display = "flex";
-                gsap.fromTo("#premium-overlay .auth-card",
+                gsap.fromTo("#premium-overlay .premium-card",
                     { y: -50, opacity: 0 },
                     { y: 0, opacity: 1, duration: 0.5, ease: "back.out(1.5)" }
                 );

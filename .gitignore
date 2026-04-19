@@ -179,3 +179,13 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Luna AI — Dev/Test files (do not deploy to production)
+demo.html
+test.py
+test_api.py
+test_screenshot.py
+revert_to_groq.py
+health_check.py
+chat_history.db
+*.db

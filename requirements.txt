@@ -1,52 +1,24 @@
-# Core LLM & AI
-groq
-langchain
-langchain-groq
-langchain-community
-
-# OpenAI
-openai
-
-# Anthropic
-anthropic
-
-# Google Gemini
-google-generativeai
-langchain-google-genai
-
-# Hugging Face
-transformers
-huggingface-hub
-tokenizers
-datasets
-accelerate
-
-# Data Processing
-pandas
-openpyxl
-numpy
-
-# Machine Learning Utilities
-scikit-learn
-scipy
-joblib
-
-# Visualization
-matplotlib
-plotly
-
-# Web UI
-streamlit
+# Core Web Framework
 flask
 flask-cors
 
 # Environment Variable Management
 python-dotenv
-python-decouple
-pydantic-settings
 
-google-auth
-requests
-razorpay
-gunicorn
+# LLM / AI
+groq
+
+# Database
 supabase
+libsql-client
+
+# Auth & Payments
+google-auth
+pyjwt
+razorpay
+
+# HTTP
+requests
+
+# Production Server
+gunicorn

@@ -256,7 +256,7 @@ body {
 
 /* Welcome screen */
 .welcome-msg { text-align: center; padding: 32px 16px; }
-.welcome-avatar { font-size: 3.5rem; margin-bottom: 14px; }
+
 .welcome-msg h2 {
     font-family: 'Outfit', sans-serif;
     font-size: 1.4rem;
@@ -286,6 +286,8 @@ body {
     font-size: 0.95rem; line-height: 1.4;
     max-width: 100%;
     word-break: break-word;
+    will-change: transform, opacity;
+    transform: translateZ(0); /* Force Hardware Acceleration */
 }
 .msg-bubble p { margin-bottom: 5px; }
 .msg-bubble p:last-child { margin-bottom: 0; }
@@ -746,7 +748,7 @@ body {
 /* ── LANDSCAPE MOBILE ────────────────────── */
 @media (max-height: 480px) and (orientation: landscape) {
     .welcome-msg   { padding: 14px 12px; }
-    .welcome-avatar { font-size: 2.2rem; margin-bottom: 8px; }
+
     .welcome-msg h2 { font-size: 1.1rem; }
     .chat-area     { padding: 8px 12px; gap: 8px; }
     .chat-header   { min-height: 48px; padding: 6px 12px; }

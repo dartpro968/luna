@@ -9,6 +9,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
+import threading
 import razorpay
 
 import db
@@ -55,7 +56,9 @@ def split_response(text):
 load_dotenv()
 
 app = Flask(__name__, static_url_path='', static_folder='.')
-CORS(app)
+# CORS: set ALLOWED_ORIGIN env var to your production domain (e.g. https://luna-ai.onrender.com)
+allowed_origin = os.getenv("ALLOWED_ORIGIN", "*")
+CORS(app, resources={r"/api/*": {"origins": allowed_origin}})
 
 # Initialize Razorpay Client
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
@@ -327,8 +330,45 @@ def chat():
             if user_info[1]: turso_db.upsert_user_memory(user_id, "birthday", user_info[1])
             user_memory = turso_db.get_user_memory(user_id)
 
-        # Fetch history from Turso (limit 20 for maximum context)
-        conversation_history = turso_db.get_full_history(user_id, persona, limit=20)
+        # ── MONETIZATION & TIER CHECK ────────────────────────
+        import datetime
+        today_str = datetime.datetime.now().strftime("%Y-%m-%d")
+        
+        tier = user_memory.get("subscription_tier", "free")
+        
+        # Check if premium subscription has expired — auto-downgrade
+        if tier == "premium":
+            expires_at = user_memory.get("subscription_expires_at", "")
+            if expires_at and expires_at < today_str:
+                print(f"⚠️ Subscription expired for {user_id} on {expires_at}. Downgrading to free.")
+                turso_db.upsert_user_memory(user_id, "subscription_tier", "free")
+                tier = "free"
+        
+        last_date = user_memory.get("last_message_date", "")
+        
+        # Reset daily soft cap if it's a new day
+        if last_date != today_str:
+            messages_today = 0
+            turso_db.upsert_user_memory(user_id, "last_message_date", today_str)
+            turso_db.upsert_user_memory(user_id, "messages_today", "0")
+        else:
+            messages_today = int(user_memory.get("messages_today", "0"))
+            
+        if tier == "free":
+            if user_coins <= 0:
+                return jsonify({
+                    "error": "You're out of Coins! Get The Luna Pass for unlimited chats. 💜",
+                    "auth_action": "buy_coins"
+                }), 402
+        elif tier == "premium":
+            if messages_today >= 100:
+                return jsonify({
+                    "error": "The girls are resting for the night 🌙 Come back tomorrow for more!",
+                    "auth_action": "soft_cap"
+                }), 429
+
+        # Fetch history from Turso (Optimized Token Limit: 10 messages)
+        conversation_history = turso_db.get_full_history(user_id, persona, limit=12)
 
         # Recent context string for emotion analysis
         recent_context = ""
@@ -369,26 +409,36 @@ def chat():
         # Split into multiple replies if long / rapid fire
         replies = split_response(response_text)
 
-        # ── TURSO INTEGRATION: Save History ─────────────────────
-        # Save user message
-        turso_db.append_history(user_id, persona, "user", user_message)
-        # Save each assistant reply
-        for r in replies:
-            turso_db.append_history(user_id, persona, "assistant", r)
+        # ── TURSO & SUPABASE BACKGROUND SAVE ─────────────────────
+        def background_db_tasks(uid, pna, msg, reps, current_tier, msgs_today):
+            try:
+                # Save user message
+                turso_db.append_history(uid, pna, "user", msg)
+                for r in reps:
+                    turso_db.append_history(uid, pna, "assistant", r)
 
-        # Keep Supabase mirrored for legacy compatibility (optional)
-        db.save_message(user_id, "user", user_message, persona=persona)
-        for r in replies:
-            db.save_message(user_id, "assistant", r, persona=persona)
+                # Keep Supabase mirrored for legacy compatibility
+                db.save_message(uid, "user", msg, persona=pna)
+                for r in reps:
+                    db.save_message(uid, "assistant", r, persona=pna)
 
-        # Deduct coin (one coin per exchange)
-        db.deduct_coin(user_id)
+                # Monetization Updates
+                if current_tier == "free":
+                    db.deduct_coin(uid)
+                elif current_tier == "premium":
+                    turso_db.upsert_user_memory(uid, "messages_today", str(msgs_today + 1))
+            except Exception as e:
+                print(f"⚠️ Background DB Save Error: {e}")
+
+        # Fire and forget database saving!
+        threading.Thread(target=background_db_tasks, args=(user_id, persona, user_message, replies, tier, messages_today)).start()
 
         return jsonify({
             "replies": replies,
             "emotion": emotion_data.get("emotion", "neutral"),
             "intensity": emotion_data.get("intensity", "medium"),
-            "coins_remaining": max(0, user_coins - 1)
+            "coins_remaining": max(0, user_coins - 1) if tier == "free" else "Unlimited",
+            "tier": tier
         })
 
     except Exception as e:
@@ -424,16 +474,22 @@ def create_order():
         return jsonify({"error": "Unauthorized"}), 401
 
     data   = request.get_json()
-    amount = data.get("amount", 0)
-    coins  = data.get("coins", 0)
+    package_type = data.get("package_type", "") # "subscription", "coins_100", "coins_500"
 
-    valid_packages = {10: 30, 50: 150, 100: 300}
-    if valid_packages.get(coins) != amount:
-        return jsonify({"error": "Invalid coin amount package"}), 400
+    valid_packages = {
+        "subscription": 349,  # The Luna Pass (Unlimited 100/day softcap)
+        "coins_100": 59,      # 100 coins
+        "coins_500": 199      # 500 coins
+    }
+    
+    if package_type not in valid_packages:
+        return jsonify({"error": "Invalid package package"}), 400
+        
+    amount = valid_packages[package_type]
 
     try:
         order = razorpay_client.order.create({
-            "amount": amount * 100,
+            "amount": amount * 100, # paise
             "currency": "INR",
             "payment_capture": 1
         })
@@ -458,7 +514,7 @@ def verify_payment():
     razorpay_payment_id   = data.get("razorpay_payment_id")
     razorpay_order_id     = data.get("razorpay_order_id")
     razorpay_signature    = data.get("razorpay_signature")
-    coins                 = data.get("coins", 0)
+    package_type          = data.get("package_type", "")
 
     try:
         razorpay_client.utility.verify_payment_signature({
@@ -466,9 +522,37 @@ def verify_payment():
             'razorpay_payment_id': razorpay_payment_id,
             'razorpay_signature':  razorpay_signature
         })
-        db.add_coins(user_id, coins)
-        user_info = db.get_user_by_id(user_id)
-        return jsonify({"status": "success", "new_balance": user_info[2]})
+        
+        # Apply rewards based on package type
+        if package_type == "subscription":
+            import datetime
+            today_str = datetime.datetime.now().strftime("%Y-%m-%d")
+            # Expiry = 30 days from today
+            expires_str = (datetime.datetime.now() + datetime.timedelta(days=30)).strftime("%Y-%m-%d")
+            turso_db.upsert_user_memory(user_id, "subscription_tier", "premium")
+            turso_db.upsert_user_memory(user_id, "subscription_expires_at", expires_str)
+            turso_db.upsert_user_memory(user_id, "last_message_date", today_str)
+            turso_db.upsert_user_memory(user_id, "messages_today", "0")
+            return jsonify({
+                "status": "success",
+                "message": f"Welcome to Luna Pass! Valid until {expires_str} 💜",
+                "tier": "premium",
+                "expires_at": expires_str
+            })
+            
+        elif package_type == "coins_100":
+            db.add_coins(user_id, 100)
+            user_info = db.get_user_by_id(user_id)
+            return jsonify({"status": "success", "new_balance": user_info[2]})
+            
+        elif package_type == "coins_500":
+            db.add_coins(user_id, 500)
+            user_info = db.get_user_by_id(user_id)
+            return jsonify({"status": "success", "new_balance": user_info[2]})
+            
+        else:
+            return jsonify({"error": "Unknown package type"}), 400
+            
     except razorpay.errors.SignatureVerificationError:
         return jsonify({"error": "Invalid payment signature"}), 400
     except Exception as e:
@@ -491,6 +575,10 @@ def health():
 
 @app.route("/api/admin/boost", methods=["GET"])
 def admin_boost():
+    # Admin-only endpoint protected by secret key
+    admin_secret = request.args.get("secret", "")
+    if admin_secret != os.getenv("ADMIN_SECRET", "luna-admin-secret"):
+        return jsonify({"error": "Forbidden"}), 403
     user_id = get_current_user_id()
     if not user_id:
         return jsonify({"error": "Unauthorized"}), 401
@@ -517,4 +605,6 @@ if __name__ == "__main__":
     print("🗄️  Database: Supabase (cloud Postgres)")
     print("🌐 Server: http://localhost:5000\n")
 
-    app.run(debug=True, port=5000)
+    # Use debug=False for production stability
+    debug_mode = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    app.run(debug=debug_mode, port=5000)

@@ -8,6 +8,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  
+  <!-- PWA Manifest & App Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a0b14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="images/luna_dp.png">
+
+  <link rel="preload" as="image" href="images/luna_dp.png">
+  <link rel="preload" as="image" href="images/priya_dp.png">
+  <link rel="preload" as="image" href="images/sofia_dp.png">
+  <link rel="preload" as="image" href="images/nara_dp.png">
   <style>
     *, *::before, *::after {
       margin: 0; padding: 0; box-sizing: border-box;
@@ -197,13 +209,14 @@
     /* ── Card Top Image Zone ── */
     .card-visual {
       position: relative;
-      height: 260px;
+      height: 300px;
       overflow: hidden;
     }
     .profile-image {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      object-position: top center; /* Show face, not mid-body */
       position: relative;
       z-index: 1;
       transition: transform 0.6s ease;
@@ -516,7 +529,7 @@
     <!-- ✦ LUNA ── -->
     <div class="persona-card luna-card" id="card-luna" role="button" tabindex="0" aria-label="Chat with Luna">
       <div class="card-visual">
-        <img src="images/luna_dp.jpg" alt="Luna DP" class="profile-image">
+        <img src="images/luna_dp.png" alt="Luna DP" class="profile-image">
         <div class="card-gradient-overlay"></div>
         <div class="card-top-badge">
           <span class="flag-badge">🇺🇸</span>
@@ -553,7 +566,7 @@
     <!-- ✦ PRIYA ── -->
     <div class="persona-card priya-card" id="card-priya" role="button" tabindex="0" aria-label="Chat with Priya">
       <div class="card-visual">
-        <img src="images/priya_dp.jpg" alt="Priya DP" class="profile-image">
+        <img src="images/priya_dp.png" alt="Priya DP" class="profile-image">
         <div class="card-gradient-overlay"></div>
         <div class="card-top-badge">
           <span class="flag-badge">🇮🇳</span>
@@ -590,7 +603,7 @@
     <!-- ✦ SOFIA ── -->
     <div class="persona-card sofia-card" id="card-sofia" role="button" tabindex="0" aria-label="Chat with Sofia">
       <div class="card-visual">
-        <img src="images/sofia_dp.jpg" alt="Sofia DP" class="profile-image">
+        <img src="images/sofia_dp.png" alt="Sofia DP" class="profile-image">
         <div class="card-gradient-overlay"></div>
         <div class="card-top-badge">
           <span class="flag-badge">🇪🇸</span>
@@ -628,7 +641,7 @@
     <!-- ✦ NARA ── -->
     <div class="persona-card nara-card" id="card-nara" role="button" tabindex="0" aria-label="Chat with Nara">
       <div class="card-visual">
-        <img src="images/nara_dp.jpg" alt="Nara DP" class="profile-image">
+        <img src="images/nara_dp.png" alt="Nara DP" class="profile-image">
         <div class="card-gradient-overlay"></div>
         <div class="card-top-badge">
           <span class="flag-badge">🇹🇭</span>
